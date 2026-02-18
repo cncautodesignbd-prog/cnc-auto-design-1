@@ -2,9 +2,7 @@
 // Replace localStorage functions with API calls
 
 // Configuration
-const API_BASE_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:5000/api' 
-    : 'https://cnc-auto-admin.onrender.com/api';
+const API_BASE_URL = 'https://cnc-auto-design-1.onrender.com/api';
 const API_KEY = process.env.CNC_API_KEY || 'cnc_auto_design_2025_online';
 
 // Admin session management

@@ -1020,10 +1020,10 @@
       // Show notification about expiry
       alert(`Account approved! Expiry set to ${expiry} (${daysToAdd/30} months from today). You can modify this in account details.`);
       
-      // Notify local desktop app (if running) to auto-login
+      // Notify online server
       try{
         const plan = (approved.plan||'').toLowerCase();
-        fetch('http://127.0.0.1:51234/approve',{
+        fetch('https://cnc-auto-design-1.onrender.com/api/user/login',{
           method:'POST',
           headers:{'Content-Type':'application/json'},
           body: JSON.stringify({

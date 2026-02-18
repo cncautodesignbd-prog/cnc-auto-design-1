@@ -320,8 +320,8 @@
         
         // User is approved and valid - proceed with login
         try{
-          // notify desktop app local server to approve
-          await fetch('http://127.0.0.1:51234/approve', {
+          // notify online server
+          await fetch('https://cnc-auto-design-1.onrender.com/api/user/login', {
             method:'POST', 
             headers:{'Content-Type':'application/json'}, 
             body: JSON.stringify({
@@ -359,9 +359,9 @@
       }
     }
     
-    async function notifyDesktopApp(user){
+    async function notifyOnlineServer(user){
         try{
-            await fetch('http://127.0.0.1:51234/approve', {
+            await fetch('https://cnc-auto-design-1.onrender.com/api/user/login', {
                 method:'POST', 
                 headers:{'Content-Type':'application/json'}, 
                 body: JSON.stringify({
