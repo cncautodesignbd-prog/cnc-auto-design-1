@@ -6,9 +6,15 @@ const path = require('path');
 // Initialize Firebase Admin SDK
 let serviceAccount;
 
-if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-} else {
+try {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  } else {
+    serviceAccount = require('./service-account.json');
+  }
+} catch (error) {
+  console.error('Error parsing Firebase service account:', error);
+  console.log('Using fallback service account file');
   serviceAccount = require('./service-account.json');
 }
 
