@@ -1,0 +1,21 @@
+[build]
+  publish = "web"
+  command = "echo 'No build needed'"
+
+[dev]
+  functionsPort = 9999
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://cnc-auto-design-1.onrender.com/api/:splat"
+  status = 200
+
+[context.production.environment]
+  CNC_API_KEY = "cnc_auto_design_2025_online"
+  FIREBASE_PROJECT_ID = "flutter-ai-playground-e054b"
+  SERVER_URL = "https://cnc-auto-design-1.onrender.com"
+
+[context.deploy-preview.environment]
+  CNC_API_KEY = "cnc_auto_design_2025_online"
+  FIREBASE_PROJECT_ID = "flutter-ai-playground-e054b"
+  SERVER_URL = "https://cnc-auto-design-1.onrender.com"
