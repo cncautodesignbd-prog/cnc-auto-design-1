@@ -4,11 +4,17 @@ const cors = require('cors');
 const path = require('path');
 
 // Initialize Firebase Admin SDK
-const serviceAccount = require('./service-account.json');
+let serviceAccount;
+
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+} else {
+  serviceAccount = require('./service-account.json');
+}
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  projectId: 'flutter-ai-playground-e054b'
+  projectId: process.env.FIREBASE_PROJECT_ID || 'flutter-ai-playground-e054b'
 });
 
 const db = admin.firestore();
