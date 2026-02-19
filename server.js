@@ -348,5 +348,5 @@ app.use(express.static(path.join(__dirname, 'web')));
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 CNC Admin Server running on port ${PORT}`);
-  console.log(`📊 Admin Panel: http://localhost:${PORT}/login/admin.html`);
+  console.log(`📊 Admin Panel: https://cnc-auto-design-1.onrender.com/login/admin.html`);
 });

@@ -360,8 +360,18 @@
       input.addEventListener('input', filter);
     })();
     // Header overlay controls
-    function getRequests(){
-      try{ return JSON.parse(localStorage.getItem('requests')||'[]'); }catch(e){ return []; }
+    // Load requests from online API
+    async function getRequests(){
+      try {
+        const response = await fetch('/api/admin/pending-requests', {
+          headers: {'x-api-key': 'cnc_auto_design_2025_online'}
+        });
+        const data = await response.json();
+        return data.requests || [];
+      } catch(e) {
+        console.error('Failed to load requests:', e);
+        return [];
+      }
     }
     function setRequests(arr){ try{ localStorage.setItem('requests', JSON.stringify(arr||[])); }catch(e){} }
     // Get expired accounts
@@ -447,8 +457,18 @@
       setInterval(cleanExpiredAccounts, 5 * 60 * 1000);
     });
     
-    function getActive(){
-      try{ return JSON.parse(localStorage.getItem('activeUsers')||'[]'); }catch(e){ return []; }
+    // Load active users from online API
+    async function getActive(){
+      try {
+        const response = await fetch('/api/admin/active-users', {
+          headers: {'x-api-key': 'cnc_auto_design_2025_online'}
+        });
+        const data = await response.json();
+        return data.users || [];
+      } catch(e) {
+        console.error('Failed to load active users:', e);
+        return [];
+      }
     }
     function setActive(arr){ try{ localStorage.setItem('activeUsers', JSON.stringify(arr||[])); }catch(e){} }
     function openHeaderMenu(){
@@ -458,9 +478,9 @@
     function closeHeaderMenu(){
       document.getElementById('topMenuOverlay').style.display='none';
     }
-    function openActiveList(){
+    async function openActiveList(){
       const wrap = document.getElementById('active-list');
-      const list = getActive();
+      const list = await getActive();
       wrap.innerHTML = '';
       list.forEach((u,idx)=>{
         const row = document.createElement('div');
@@ -920,9 +940,9 @@
       }
     }
     // Requests rendering
-    function renderRequests(){
+    async function renderRequests(){
       const wrap = document.getElementById('request-list');
-      const reqs = getRequests();
+      const reqs = await getRequests();
       wrap.innerHTML = '';
       if(!reqs.length){
         const empty = document.createElement('div');
@@ -1041,8 +1061,10 @@
       if(confirm('Reject this request?')){ reqs.splice(i,1); setRequests(reqs); renderRequests(); }
     }
     // Update badges
-    document.getElementById('badge-active').textContent = getActive().length;
-    renderRequests();
+    (async function() {
+      document.getElementById('badge-active').textContent = (await getActive()).length;
+      renderRequests();
+    })();
     // Sidebar controls
     function openSideMenu(){
       const ov = document.getElementById('sideOverlay');
