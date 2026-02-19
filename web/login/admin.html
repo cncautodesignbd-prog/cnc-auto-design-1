@@ -342,6 +342,16 @@
         window.location.replace('../login/index.html');
         return;
       }
+      
+      // Load data after authentication
+      (async function() {
+        try {
+          await renderRequests();
+          document.getElementById('badge-active').textContent = (await getActive()).length;
+        } catch(e) {
+          console.error('Error loading admin data:', e);
+        }
+      })();
     })();
     (function(){
       const input = document.getElementById('admin-search');
@@ -363,7 +373,7 @@
     // Load requests from online API
     async function getRequests(){
       try {
-        const response = await fetch('/api/admin/pending-requests', {
+        const response = await fetch('https://cnc-auto-design-1.onrender.com/api/admin/pending-requests', {
           headers: {'x-api-key': 'cnc_auto_design_2025_online'}
         });
         const data = await response.json();
@@ -460,7 +470,7 @@
     // Load active users from online API
     async function getActive(){
       try {
-        const response = await fetch('/api/admin/active-users', {
+        const response = await fetch('https://cnc-auto-design-1.onrender.com/api/admin/active-users', {
           headers: {'x-api-key': 'cnc_auto_design_2025_online'}
         });
         const data = await response.json();
