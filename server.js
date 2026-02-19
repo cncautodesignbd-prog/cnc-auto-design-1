@@ -265,6 +265,45 @@ app.get('/api/admin/stats', validateApiKey, async (req, res) => {
   }
 });
 
+// Admin API endpoints
+app.get('/api/admin/pending-requests', async (req, res) => {
+  try {
+    const snapshot = await db.collection('requests')
+      .where('status', '==', 'pending')
+      .orderBy('created', 'desc')
+      .get();
+    
+    const requests = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    
+    res.json({ success: true, requests });
+  } catch (error) {
+    console.error('Error fetching pending requests:', error);
+    res.status(500).json({ error: 'Failed to fetch requests' });
+  }
+});
+
+app.get('/api/admin/active-users', async (req, res) => {
+  try {
+    const snapshot = await db.collection('active_users')
+      .where('status', '==', 'active')
+      .orderBy('approved_at', 'desc')
+      .get();
+    
+    const users = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    
+    res.json({ success: true, users });
+  } catch (error) {
+    console.error('Error fetching active users:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
 // User submit request (from login.html)
 app.post('/api/user/request', async (req, res) => {
   try {
