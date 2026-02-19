@@ -18,10 +18,14 @@ try {
   serviceAccount = require('./service-account.json');
 }
 
-admin.initializeApp({
+// Initialize Firebase with ignoreUndefinedProperties
+const adminConfig = {
   credential: admin.credential.cert(serviceAccount),
-  projectId: process.env.FIREBASE_PROJECT_ID || 'flutter-ai-playground-e054b'
-});
+  projectId: process.env.FIREBASE_PROJECT_ID || 'flutter-ai-playground-e054b',
+  ignoreUndefinedProperties: true
+};
+
+admin.initializeApp(adminConfig);
 
 const db = admin.firestore();
 const app = express();
@@ -271,7 +275,7 @@ app.post('/api/user/request', async (req, res) => {
       email,
       phone: phone || '',
       plan,
-      method,
+      method: method || '',
       trx: trx || '',
       device_info: device_info || {},
       status: 'pending',

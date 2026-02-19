@@ -5,7 +5,7 @@
 const API_BASE_URL = window.location.origin === 'https://cnc-auto-design-1.onrender.com' 
     ? 'https://cnc-auto-design-1.onrender.com/api'
     : '/api'; // Use Netlify proxy
-const API_KEY = process.env.CNC_API_KEY || 'cnc_auto_design_2025_online';
+const API_KEY = 'cnc_auto_design_2025_online';
 
 // Admin session management
 let adminToken = localStorage.getItem('adminToken') || '';
