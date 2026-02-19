@@ -4,29 +4,14 @@ const cors = require('cors');
 const path = require('path');
 
 // Initialize Firebase Admin SDK
-let serviceAccount;
+const serviceAccount = require('./service-account.json');
 
-try {
-  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-  } else {
-    serviceAccount = require('./service-account.json');
-  }
-} catch (error) {
-  console.error('Error parsing Firebase service account:', error);
-  console.log('Using fallback service account file');
-  serviceAccount = require('./service-account.json');
-}
-
-// Initialize Firebase with ignoreUndefinedProperties
 const adminConfig = {
   credential: admin.credential.cert(serviceAccount),
-  projectId: process.env.FIREBASE_PROJECT_ID || 'flutter-ai-playground-e054b',
-  ignoreUndefinedProperties: true
+  projectId: 'flutter-ai-playground-e054b'
 };
 
 admin.initializeApp(adminConfig);
-
 const db = admin.firestore();
 const app = express();
 
@@ -44,24 +29,6 @@ function validateApiKey(req, res, next) {
   }
   next();
 }
-
-// Admin authentication
-async function authenticateAdmin(req, res, next) {
-  try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return res.status(401).json({ error: 'No admin token provided' });
-    }
-
-    const decoded = admin.auth().verifyIdToken(token);
-    req.admin = decoded;
-    next();
-  } catch (error) {
-    res.status(401).json({ error: 'Invalid admin token' });
-  }
-}
-
-// Routes
 
 // Admin login
 app.post('/api/admin/login', validateApiKey, async (req, res) => {
@@ -134,6 +101,30 @@ app.get('/api/admin/active-users', validateApiKey, async (req, res) => {
   }
 });
 
+// Get system stats
+app.get('/api/admin/stats', validateApiKey, async (req, res) => {
+  try {
+    const requestsSnapshot = await db.collection('requests').get();
+    const usersSnapshot = await db.collection('active_users').get();
+    
+    const stats = {
+      total_requests: requestsSnapshot.size,
+      pending_requests: requestsSnapshot.docs.filter(doc => doc.data().status === 'pending').length,
+      approved_requests: requestsSnapshot.docs.filter(doc => doc.data().status === 'approved').length,
+      active_users: usersSnapshot.docs.filter(doc => doc.data().status === 'active').length,
+      expired_users: usersSnapshot.docs.filter(doc => {
+        const expiry = new Date(doc.data().expiry);
+        return expiry < new Date();
+      }).length
+    };
+    
+    res.json({ success: true, stats });
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
 // Approve request
 app.post('/api/admin/approve', validateApiKey, async (req, res) => {
   try {
@@ -196,76 +187,7 @@ app.post('/api/admin/reject', validateApiKey, async (req, res) => {
   }
 });
 
-// Extend license
-app.post('/api/admin/extend', validateApiKey, async (req, res) => {
-  try {
-    const { email, days, reason } = req.body;
-    
-    const userDoc = await db.collection('active_users').doc(email).get();
-    if (!userDoc.exists) {
-      return res.json({ success: false, error: 'User not found' });
-    }
-    
-    const userData = userDoc.data();
-    const currentExpiry = new Date(userData.expiry);
-    currentExpiry.setDate(currentExpiry.getDate() + days);
-    
-    await db.collection('active_users').doc(email).update({
-      expiry: currentExpiry.toISOString().split('T')[0],
-      extended_at: new Date().toISOString(),
-      extension_reason: reason
-    });
-    
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error extending license:', error);
-    res.status(500).json({ error: 'Failed to extend license' });
-  }
-});
-
-// Revoke license
-app.post('/api/admin/revoke', validateApiKey, async (req, res) => {
-  try {
-    const { email, reason } = req.body;
-    
-    await db.collection('active_users').doc(email).update({
-      status: 'revoked',
-      revoked_at: new Date().toISOString(),
-      revocation_reason: reason
-    });
-    
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error revoking license:', error);
-    res.status(500).json({ error: 'Failed to revoke license' });
-  }
-});
-
-// Get system stats
-app.get('/api/admin/stats', validateApiKey, async (req, res) => {
-  try {
-    const requestsSnapshot = await db.collection('requests').get();
-    const usersSnapshot = await db.collection('active_users').get();
-    
-    const stats = {
-      total_requests: requestsSnapshot.size,
-      pending_requests: requestsSnapshot.docs.filter(doc => doc.data().status === 'pending').length,
-      approved_requests: requestsSnapshot.docs.filter(doc => doc.data().status === 'approved').length,
-      active_users: usersSnapshot.docs.filter(doc => doc.data().status === 'active').length,
-      expired_users: usersSnapshot.docs.filter(doc => {
-        const expiry = new Date(doc.data().expiry);
-        return expiry < new Date();
-      }).length
-    };
-    
-    res.json({ success: true, stats });
-  } catch (error) {
-    console.error('Error fetching stats:', error);
-    res.status(500).json({ error: 'Failed to fetch stats' });
-  }
-});
-
-// User submit request (from login.html)
+// User submit request
 app.post('/api/user/request', validateApiKey, async (req, res) => {
   try {
     const { name, email, phone, plan, method, trx, device_info } = req.body;
@@ -346,7 +268,7 @@ function calculateDaysRemaining(expiry) {
   return Math.max(0, diffDays);
 }
 
-// Serve static files (optional)
+// Serve static files
 app.use(express.static(path.join(__dirname, 'web')));
 
 const PORT = process.env.PORT || 5000;
@@ -354,3 +276,4 @@ app.listen(PORT, () => {
   console.log(`🚀 CNC Admin Server running on port ${PORT}`);
   console.log(`📊 Admin Panel: https://cnc-auto-design-1.onrender.com/login/admin.html`);
 });
+
