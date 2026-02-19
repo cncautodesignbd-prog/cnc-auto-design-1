@@ -1,10 +1,8 @@
 // Online Database Integration for Admin Panel
 // Replace localStorage functions with API calls
 
-// Configuration
-const API_BASE_URL = window.location.origin === 'https://cnc-auto-design-1.onrender.com' 
-    ? 'https://cnc-auto-design-1.onrender.com/api'
-    : '/api'; // Use Netlify proxy
+// Configuration - Always use Render backend
+const API_BASE_URL = 'https://cnc-auto-design-1.onrender.com/api';
 const API_KEY = 'cnc_auto_design_2025_online';
 
 // Admin session management
@@ -47,7 +45,7 @@ async function apiCall(endpoint, method = 'GET', data = null) {
 async function adminLogin(email) {
     try {
         const result = await apiCall('/admin/login', 'POST', { email });
-        if (result.success) {
+        if (result && result.success) {
             adminToken = result.token;
             localStorage.setItem('adminToken', adminToken);
             localStorage.setItem('adminEmail', email);
