@@ -304,6 +304,59 @@ app.get('/api/admin/active-users', async (req, res) => {
   }
 });
 
+// Admin approve request
+app.post('/api/admin/approve', async (req, res) => {
+  try {
+    const { email, name, phone, plan, method, trx } = req.body;
+    
+    // Calculate expiry date
+    const createdDate = new Date();
+    const expiryDate = new Date(createdDate);
+    let daysToAdd = 180; // Default to 6 months
+    
+    if(plan === 'premium' || plan === '12m'){
+      expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+      daysToAdd = 365;
+    } else {
+      expiryDate.setMonth(expiryDate.getMonth() + 6);
+    }
+    
+    // Add to active users
+    await db.collection('active_users').doc(email).set({
+      email,
+      name,
+      phone: phone || '',
+      plan,
+      method: method || '',
+      trx: trx || '',
+      created: createdDate.toISOString(),
+      expiry: expiryDate.toISOString().split('T')[0],
+      approved_at: new Date().toISOString(),
+      status: 'active'
+    });
+    
+    // Remove from pending requests
+    const snapshot = await db.collection('requests')
+      .where('email', '==', email)
+      .where('status', '==', 'pending')
+      .get();
+    
+    const batch = db.batch();
+    snapshot.docs.forEach(doc => {
+      batch.update(doc.ref, {
+        status: 'approved',
+        approved_at: new Date().toISOString()
+      });
+    });
+    await batch.commit();
+    
+    res.json({ success: true, message: 'Request approved successfully' });
+  } catch (error) {
+    console.error('Error approving request:', error);
+    res.status(500).json({ error: 'Failed to approve request' });
+  }
+});
+
 // User submit request (from login.html)
 app.post('/api/user/request', async (req, res) => {
   try {
