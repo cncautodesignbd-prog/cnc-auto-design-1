@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Account - CNC AUTO DESIGN</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="./cnc_auto_design.png" sizes="48x48" type="image/png">
+  <style>
+    :root {
+      --bg: #0b1220;
+      --text: #eef2ff;
+      --border: #1e293b;
+      --primary: #60a5fa;
+      --primary-dark: #22d3ee;
+      --accent: #22c55e;
+      --card: #0f172a;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+    .container{max-width:1200px;margin:0 auto;padding:0 20px}
+    header{position:sticky;top:0;z-index:20;background:#ffffff;backdrop-filter:none;border-bottom:1px solid #e5e7eb}
+    .nav{display:flex;align-items:center;justify-content:space-between;height:64px}
+    .brand{display:flex;gap:10px;align-items:center}
+    .brand img{width:34px;height:34px;border-radius:8px;box-shadow:0 0 0 2px rgba(96,165,250,.35)}
+    .brand b{letter-spacing:.3px;color:#111827}
+    .nav .links{display:flex;gap:18px;align-items:center}
+    header .links a{color:#111827;text-decoration:none;font-weight:500}
+    header a{color:#111827;text-decoration:none}
+    .btn{appearance:none;border:none;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer;text-decoration:none}
+    .btn-primary{background:linear-gradient(135deg,#60a5fa,#22d3ee);color:#05121d;border:1px solid #7dd3fc}
+    .btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+    .btn:hover{filter:brightness(1.05)}
+    .btn:active{transform:scale(.98)}
+    .account-section{margin:40px 0}
+    .account-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;margin-bottom:24px}
+    .account-header{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+    .avatar{width:64px;height:64px;border-radius:50%;border:2px solid var(--primary)}
+    .user-info h2{margin:0 0 8px;color:var(--text)}
+    .user-info p{margin:0;color:#9aa6b2}
+    .account-nav{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:24px}
+    .nav-item{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center;text-decoration:none;color:var(--text);transition:all 0.2s}
+    .nav-item:hover{border-color:var(--primary);transform:translateY(-2px)}
+    .nav-item h3{margin:0 0 12px;font-size:18px}
+    .nav-item p{margin:0;color:#9aa6b2;font-size:14px}
+    .nav-item .icon{font-size:32px;margin-bottom:12px;display:block}
+    .logout-btn{background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff;margin-top:32px;width:100%}
+    .logout-btn:hover{filter:brightness(1.05)}
+    @media (max-width:768px){
+      .account-nav{grid-template-columns:1fr}
+      .container{padding:0 16px}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <div class="brand">
+        <img src="./cnc_auto_design.png" onerror="this.style.display='none'" alt="Logo"/>
+        <b>CNC AUTO DESIGN</b>
+      </div>
+      <div class="links">
+        <a href="index.html">Home</a>
+        <a href="#" class="btn btn-primary" id="accountBtn">Account</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="account-section">
+      <div class="account-card">
+        <div class="account-header">
+          <img src="./cnc_auto_design.png" alt="Avatar" class="avatar" id="userAvatar">
+          <div class="user-info">
+            <h2 id="userName">Welcome User</h2>
+            <p id="userEmail">user@example.com</p>
+          </div>
+        </div>
+
+        <div class="account-nav">
+          <a href="#profile" class="nav-item">
+            <span class="icon">👤</span>
+            <h3>Profile</h3>
+            <p>Manage your personal information</p>
+          </a>
+          <a href="#subscription" class="nav-item">
+            <span class="icon">💳</span>
+            <h3>Subscription</h3>
+            <p>View your plan details</p>
+          </a>
+          <a href="#downloads" class="nav-item">
+            <span class="icon">📥</span>
+            <h3>Downloads</h3>
+            <p>Access your purchased software</p>
+          </a>
+          <a href="#settings" class="nav-item">
+            <span class="icon">⚙️</span>
+            <h3>Settings</h3>
+            <p>Configure your preferences</p>
+          </a>
+        </div>
+
+        <button class="btn logout-btn" onclick="logout()">
+          🚪 Sign Out
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <script src="auth.js"></script>
+  <script>
+    // Check if user is logged in
+    function checkLoginStatus() {
+      if (!authManager.isLoggedIn()) {
+        // Not logged in, redirect to login page
+        window.location.href = 'index.html';
+        return;
+      }
+      
+      // Check if account is expired by calling server
+      const userToken = localStorage.getItem('userToken');
+      if (userToken) {
+        fetch('https://cnc-auto-design-1.onrender.com/api/auth/check', {
+          headers: {
+            'Authorization': `Bearer ${userToken}`
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (!data.success) {
+            // Account expired or invalid, redirect to login
+            localStorage.removeItem('userToken');
+            localStorage.removeItem('userInfo');
+            localStorage.removeItem('userName');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userPhoto');
+            window.location.href = 'index.html';
+            return;
+          }
+          
+          // Update UI with user info
+          const user = data.user || authManager.getCurrentUser();
+          document.getElementById('userName').textContent = user.name || 'User';
+          document.getElementById('userEmail').textContent = user.email || 'user@example.com';
+          
+          if (user.photo) {
+            document.getElementById('userAvatar').src = user.photo;
+          }
+        })
+        .catch(error => {
+          console.error('Auth check failed:', error);
+          // If server check fails, still show user info from localStorage
+          const user = authManager.getCurrentUser();
+          document.getElementById('userName').textContent = user.name || 'User';
+          document.getElementById('userEmail').textContent = user.email || 'user@example.com';
+        });
+      } else {
+        // Update UI with user info from localStorage
+        const user = authManager.getCurrentUser();
+        document.getElementById('userName').textContent = user.name || 'User';
+        document.getElementById('userEmail').textContent = user.email || 'user@example.com';
+        
+        if (user.photo) {
+          document.getElementById('userAvatar').src = user.photo;
+        }
+      }
+    }
+    
+    // Logout function
+    function logout() {
+      authManager.logout();
+    }
+    
+    // Check login status on page load
+    document.addEventListener('DOMContentLoaded', checkLoginStatus);
+    
+    // Check every 5 minutes for expiry
+    setInterval(checkLoginStatus, 5 * 60 * 1000);
+  </script>
+</body>
+</html>
