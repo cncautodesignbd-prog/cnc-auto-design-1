@@ -166,6 +166,54 @@ app.put('/api/settings', (req, res) => {
     }
 });
 
+// Check license status endpoint for Windows software
+app.post('/api/check-license', (req, res) => {
+    const { email } = req.body;
+    
+    if (!email) {
+        return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+    
+    // Get active users (approved users)
+    const activeUsers = readData(ACTIVE_USERS_FILE);
+    const user = activeUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+    
+    if (!user) {
+        // User not found - likely rejected or removed
+        return res.status(404).json({ 
+            success: false, 
+            status: "rejected",
+            message: 'Account not found or removed by admin' 
+        });
+    }
+    
+    // Check if user account is still valid (not expired)
+    if (user.expiry) {
+        const expiryDate = new Date(user.expiry);
+        const now = new Date();
+        if (now > expiryDate) {
+            // Delete expired user
+            const filteredUsers = activeUsers.filter(u => u.id !== user.id);
+            writeData(ACTIVE_USERS_FILE, filteredUsers);
+            return res.status(404).json({ 
+                success: false, 
+                status: "rejected",
+                message: 'Account has expired' 
+            });
+        }
+    }
+    
+    // User is active, return status
+    res.json({
+        success: true,
+        status: "active",
+        plan: user.plan || 'trial',
+        expiry: user.expiry || (Date.now() + 7 * 24 * 60 * 60 * 1000), // Default 7 days
+        features: user.features || ["ai_processing", "advanced_tools"],
+        email: user.email
+    });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'Server is running', timestamp: new Date().toISOString() });
