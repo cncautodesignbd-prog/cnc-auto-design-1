@@ -292,15 +292,32 @@ function checkExpiry(req, res, next) {
     next();
 }
 
-// Serve the main website
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        dataDir: path.join(__dirname, 'data'),
+        files: {
+            requests: fs.existsSync(REQUESTS_FILE),
+            activeUsers: fs.existsSync(ACTIVE_USERS_FILE),
+            settings: fs.existsSync(SETTINGS_FILE)
+        }
+    });
+});
+
+// Serve main website
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'login', 'index.html'));
 });
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📁 Data directory: ${path.join(__dirname, 'data')}`);
-    console.log(`🌐 Admin panel: http://localhost:${PORT}/login/admin.html`);
-    console.log(`🏠 Main site: http://localhost:${PORT}/login/index.html`);
+    console.log(`🌐 Admin panel: /login/admin.html`);
+    console.log(`🏠 Main site: /login/index.html`);
+    console.log(`🔍 Health check: http://localhost:${PORT}/api/health`);
 });
