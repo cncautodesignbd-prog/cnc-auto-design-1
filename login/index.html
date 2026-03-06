@@ -1631,10 +1631,18 @@
       let enhancedChat = null;
       
       // Wait for enhanced chat to initialize
-      setTimeout(() => {
-        enhancedChat = window.enhancedChat;
-        console.log('Enhanced chat system loaded in index.html');
-      }, 500);
+      function initializeEnhancedChat() {
+        if (window.enhancedChat) {
+          enhancedChat = window.enhancedChat;
+          console.log('Enhanced chat system loaded in index.html');
+        } else {
+          // Try again after a short delay
+          setTimeout(initializeEnhancedChat, 500);
+        }
+      }
+      
+      // Start initialization
+      setTimeout(initializeEnhancedChat, 1000);
       
       // Open modal
       openBtn.addEventListener('click', function(e) {
@@ -1743,7 +1751,11 @@
           // Add user message to UI
           addMessageToChat(message, 'sent');
           
-          // Send message through enhanced chat system
+          // Try to send through enhanced chat system
+          if (window.enhancedChat && !enhancedChat) {
+            enhancedChat = window.enhancedChat;
+          }
+          
           if (enhancedChat) {
             enhancedChat.sendUserMessage(message);
             console.log('Message sent through enhanced chat system');
@@ -1756,13 +1768,26 @@
               userId: userInfo.email || 'anonymous',
               userName: userInfo.name || 'Anonymous',
               userEmail: userInfo.email || 'anonymous@example.com',
-              content: message
+              content: message,
+              timestamp: new Date().toISOString(),
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             };
             
             // Save to localStorage
             const messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
             messages.push(messageData);
             localStorage.setItem('chatMessages', JSON.stringify(messages));
+            
+            // Also try to send to server directly
+            fetch(`${window.location.origin}/api/chat-messages`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(messageData)
+            }).catch(error => {
+              console.log('Direct server send failed:', error);
+            });
           }
           
           // Clear input

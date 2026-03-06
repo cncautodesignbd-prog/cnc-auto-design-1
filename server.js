@@ -10,6 +10,7 @@ const PORT = 3000;
 const REQUESTS_FILE = path.join(__dirname, 'data', 'requests.json');
 const ACTIVE_USERS_FILE = path.join(__dirname, 'data', 'activeUsers.json');
 const SETTINGS_FILE = path.join(__dirname, 'data', 'settings.json');
+const CHAT_MESSAGES_FILE = path.join(__dirname, 'data', 'chat-messages.json');
 
 // Ensure data directory exists
 if (!fs.existsSync(path.join(__dirname, 'data'))) {
@@ -33,6 +34,22 @@ if (!fs.existsSync(SETTINGS_FILE)) {
         masterCard: "5111 1111 1111 1111"
     }, null, 2));
 }
+if (!fs.existsSync(CHAT_MESSAGES_FILE)) {
+    fs.writeFileSync(CHAT_MESSAGES_FILE, JSON.stringify([], null, 2));
+}
+
+// Chat messages storage (in production, use a proper database)
+let chatMessages = [];
+
+// Load existing chat messages
+try {
+    const data = fs.readFileSync(CHAT_MESSAGES_FILE, 'utf8');
+    chatMessages = JSON.parse(data);
+    console.log('Loaded', chatMessages.length, 'chat messages');
+} catch (error) {
+    console.log('No existing chat messages, starting fresh');
+    chatMessages = [];
+}
 
 // Middleware
 app.use(cors());
@@ -55,6 +72,17 @@ function writeData(filePath, data) {
         return true;
     } catch (error) {
         console.error('Error writing data:', error);
+        return false;
+    }
+}
+
+// Save chat messages to file
+function saveChatMessages() {
+    try {
+        fs.writeFileSync(CHAT_MESSAGES_FILE, JSON.stringify(chatMessages, null, 2));
+        return true;
+    } catch (error) {
+        console.error('Error saving chat messages:', error);
         return false;
     }
 }
@@ -164,6 +192,124 @@ app.put('/api/settings', (req, res) => {
     } else {
         res.status(500).json({ success: false, message: 'Failed to update settings' });
     }
+});
+
+// Chat Messages API Routes
+
+// Get all chat messages
+app.get('/api/chat-messages', (req, res) => {
+    res.json({
+        success: true,
+        messages: chatMessages,
+        count: chatMessages.length
+    });
+});
+
+// Add new chat message
+app.post('/api/chat-messages', (req, res) => {
+    try {
+        const message = req.body;
+        
+        // Validate message structure
+        if (!message.content || !message.type) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required fields: content, type'
+            });
+        }
+        
+        // Add timestamp if not provided
+        if (!message.timestamp) {
+            message.timestamp = new Date().toISOString();
+        }
+        
+        // Add unique ID if not provided
+        if (!message.id) {
+            message.id = Date.now() + Math.random();
+        }
+        
+        // Add to messages array
+        chatMessages.push(message);
+        
+        // Save to file
+        saveChatMessages();
+        
+        console.log('New chat message:', {
+            type: message.type,
+            userId: message.userId,
+            content: message.content.substring(0, 50) + '...'
+        });
+        
+        res.json({
+            success: true,
+            message: 'Message saved successfully',
+            messageId: message.id
+        });
+        
+    } catch (error) {
+        console.error('Error saving chat message:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
+    }
+});
+
+// Sync messages (for admin panel)
+app.get('/api/chat-messages/sync', (req, res) => {
+    res.json({
+        success: true,
+        messages: chatMessages,
+        count: chatMessages.length,
+        lastSync: new Date().toISOString()
+    });
+});
+
+// Get messages for specific user
+app.get('/api/chat-messages/user/:userId', (req, res) => {
+    const userId = req.params.userId;
+    const userMessages = chatMessages.filter(msg => 
+        msg.userId === userId || (msg.type === 'admin' && msg.userId === userId)
+    );
+    
+    res.json({
+        success: true,
+        messages: userMessages,
+        count: userMessages.length
+    });
+});
+
+// Get all unique users
+app.get('/api/chat-users', (req, res) => {
+    const users = {};
+    
+    chatMessages.forEach(msg => {
+        if (msg.type === 'user' && msg.userId) {
+            if (!users[msg.userId]) {
+                users[msg.userId] = {
+                    id: msg.userId,
+                    name: msg.userName || 'Unknown',
+                    email: msg.userEmail || 'unknown@example.com',
+                    lastMessage: msg.content,
+                    lastTime: msg.time || new Date().toLocaleTimeString(),
+                    status: 'online',
+                    lastSeen: new Date().toISOString()
+                };
+            } else {
+                users[msg.userId].lastMessage = msg.content;
+                users[msg.userId].lastTime = msg.time || new Date().toLocaleTimeString();
+                users[msg.userId].lastSeen = new Date().toISOString();
+            }
+        }
+    });
+    
+    const userList = Object.values(users);
+    
+    res.json({
+        success: true,
+        users: userList,
+        count: userList.length
+    });
 });
 
 // Check license status endpoint for Windows software
@@ -359,6 +505,15 @@ app.get('/api/health', (req, res) => {
 // Serve main website
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'login', 'index.html'));
+});
+
+// Serve admin live chat page
+app.get('/admin-live-chat', (req, res) => {
+    res.sendFile(path.join(__dirname, 'login', 'admin-live-chat.html'));
+});
+
+app.get('/login/admin-live-chat.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'login', 'admin-live-chat.html'));
 });
 
 // Start server
