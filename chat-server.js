@@ -11,6 +11,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('.'));
 
+// Debug middleware - log all requests
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+});
+
 // Chat messages storage (in production, use a proper database)
 let chatMessages = [];
 
@@ -163,11 +169,19 @@ app.get('/api/health', (req, res) => {
 
 // Serve static files
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'web', 'login', 'index.html'));
+    res.sendFile(path.join(__dirname, 'login', 'index.html'));
 });
 
 app.get('/admin-live-chat', (req, res) => {
-    res.sendFile(path.join(__dirname, 'web', 'login', 'admin-live-chat.html'));
+    res.sendFile(path.join(__dirname, 'login', 'admin-live-chat.html'));
+});
+
+app.get('/debug', (req, res) => {
+    res.sendFile(path.join(__dirname, 'login', 'debug.html'));
+});
+
+app.get('/debug.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'login', 'debug.html'));
 });
 
 // Start server
