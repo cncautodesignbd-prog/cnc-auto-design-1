@@ -346,8 +346,6 @@
     <div class="sidebar">
       <div class="sidebar-header">
         <h3>Active Users</h3>
-        <button onclick="testMessage()" style="margin-left: auto; background: #22c55e; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Test</button>
-        <button onclick="forceSync()" style="margin-left: 4px; background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Sync</button>
       </div>
       <div class="user-list" id="userList">
         <!-- Users will be loaded here -->
@@ -416,35 +414,6 @@
     function handleKeyPress(event) {
       if (event.key === 'Enter') {
         sendMessage();
-      }
-    }
-
-    function forceSync() {
-      console.log('Force sync called');
-      if (onlineChat && onlineChat.chatServer) {
-        onlineChat.chatServer.syncMessages();
-        onlineChat.loadAdminUsers();
-        alert('Sync completed! Check console for details.');
-      } else {
-        alert('Chat system not ready yet. Please try again.');
-      }
-    }
-
-    function testMessage() {
-      if (onlineChat && onlineChat.chatServer) {
-        // Create a test user message
-        const testUserMessage = {
-          type: 'user',
-          userId: 'test@example.com',
-          userName: 'Test User',
-          userEmail: 'test@example.com',
-          content: 'This is a test message from user at ' + new Date().toLocaleTimeString()
-        };
-        
-        onlineChat.chatServer.sendMessage(testUserMessage);
-        alert('Test message sent! Check console for details.');
-      } else {
-        alert('Chat system not ready yet. Please try again.');
       }
     }
 

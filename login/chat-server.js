@@ -1,8 +1,8 @@
 // Chat Server Integration - Real-time messaging with server storage
 class ChatServer {
   constructor() {
-    // Use production server for online deployment
-    this.serverUrl = 'https://cnc-auto-design-1.onrender.com';
+    // Auto-detect server URL
+    this.serverUrl = window.location.origin;
     this.messages = [];
     this.init();
   }
@@ -142,8 +142,19 @@ class ChatServer {
   // Get all unique users
   getActiveUsers() {
     const users = {};
+    const now = new Date();
+    
     this.messages.forEach(msg => {
       if (msg.type === 'user' && msg.userId) {
+        const lastSeen = new Date(msg.timestamp || msg.lastSeen);
+        const timeDiff = now - lastSeen;
+        const minutesInactive = timeDiff / (1000 * 60);
+        
+        // Remove user if inactive for more than 5 minutes
+        if (minutesInactive > 5) {
+          return;
+        }
+        
         if (!users[msg.userId]) {
           users[msg.userId] = {
             id: msg.userId,
@@ -152,16 +163,25 @@ class ChatServer {
             lastMessage: msg.content,
             lastTime: msg.time,
             status: 'online',
-            lastSeen: new Date()
+            lastSeen: lastSeen
           };
         } else {
           users[msg.userId].lastMessage = msg.content;
           users[msg.userId].lastTime = msg.time;
-          users[msg.userId].lastSeen = new Date();
+          users[msg.userId].lastSeen = lastSeen;
         }
       }
     });
-    return Object.values(users);
+
+    // Also keep users who have recent messages (within last 5 minutes)
+    const recentUsers = Object.values(users).filter(user => {
+      const userLastSeen = new Date(user.lastSeen);
+      const timeDiff = now - userLastSeen;
+      const minutesInactive = timeDiff / (1000 * 60);
+      return minutesInactive <= 5;
+    });
+
+    return recentUsers;
   }
 }
 
@@ -216,11 +236,39 @@ class EnhancedRealtimeChat {
       }
     });
 
+    // Auto-refresh users list every 30 seconds
+    setInterval(() => {
+      this.loadAdminUsers();
+    }, 30000);
+
+    // Clear old messages (older than 10 minutes) every 5 minutes
+    setInterval(() => {
+      this.clearOldMessages();
+    }, 300000);
+
     // Initial load
     setTimeout(() => {
       console.log('Initial admin messages:', this.chatServer.messages);
       this.loadAdminUsers();
     }, 1000);
+  }
+
+  // Clear old messages to prevent storage bloat
+  clearOldMessages() {
+    const now = new Date();
+    const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+    
+    const originalLength = this.chatServer.messages.length;
+    this.chatServer.messages = this.chatServer.messages.filter(msg => {
+      const messageTime = new Date(msg.timestamp);
+      return messageTime > tenMinutesAgo;
+    });
+    
+    if (this.chatServer.messages.length < originalLength) {
+      console.log(`Cleared ${originalLength - this.chatServer.messages.length} old messages`);
+      this.chatServer.updateLocalStorage();
+      this.chatServer.notifyUpdate();
+    }
   }
 
   // Update user chat display
