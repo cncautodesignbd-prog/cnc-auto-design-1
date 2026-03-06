@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 10000;
 
 // Data files
 const REQUESTS_FILE = path.join(__dirname, 'data', 'requests.json');
@@ -518,9 +518,15 @@ app.get('/login/admin-live-chat.html', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
+    const baseUrl = process.env.NODE_ENV === 'production' 
+        ? `https://cnc-auto-design-1.onrender.com` 
+        : `http://localhost:${PORT}`;
+    
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📁 Data directory: ${path.join(__dirname, 'data')}`);
-    console.log(`🌐 Admin panel: /login/admin.html`);
-    console.log(`🏠 Main site: /login/index.html`);
-    console.log(`🔍 Health check: http://localhost:${PORT}/api/health`);
+    console.log(`🌐 Main site: ${baseUrl}/login/index.html`);
+    console.log(`👨‍💻 Admin panel: ${baseUrl}/login/admin-live-chat.html`);
+    console.log(`🔍 Health check: ${baseUrl}/api/health`);
+    console.log(`💬 Messages API: ${baseUrl}/api/chat-messages`);
+    console.log(`👥 Users API: ${baseUrl}/api/chat-users`);
 });
