@@ -1,443 +1,197 @@
-// Chat Server Integration - Real-time messaging with server storage
-class ChatServer {
-  constructor() {
-    // Use production server for online deployment
-    this.serverUrl = 'https://cnc-auto-design-1.onrender.com';
-    this.messages = [];
-    this.init();
-  }
+const express = require('express');
+const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 
-  init() {
-    // Load existing messages from server
-    this.loadMessagesFromServer();
-    
-    // Set up periodic sync
-    setInterval(() => {
-      this.syncMessages();
-    }, 5000); // Sync every 5 seconds
-  }
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-  // Load messages from server
-  async loadMessagesFromServer() {
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static('.'));
+
+// Chat messages storage (in production, use a proper database)
+let chatMessages = [];
+
+// Load existing messages from file if exists
+const messagesFile = path.join(__dirname, 'chat-messages.json');
+if (fs.existsSync(messagesFile)) {
     try {
-      const response = await fetch(`${this.serverUrl}/api/chat-messages`);
-      if (response.ok) {
-        const data = await response.json();
-        this.messages = data.messages || [];
-        this.updateLocalStorage();
-        this.notifyUpdate();
-      }
+        const data = fs.readFileSync(messagesFile, 'utf8');
+        chatMessages = JSON.parse(data);
+        console.log('Loaded', chatMessages.length, 'messages from file');
     } catch (error) {
-      console.error('Failed to load messages from server:', error);
-      // Fallback to localStorage
-      this.loadFromLocalStorage();
+        console.log('No existing messages file, starting fresh');
     }
-  }
+}
 
-  // Load from localStorage as fallback
-  loadFromLocalStorage() {
+// Save messages to file periodically
+setInterval(() => {
     try {
-      this.messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
-    } catch (e) {
-      this.messages = [];
-    }
-  }
-
-  // Save messages to server
-  async saveMessageToServer(message) {
-    try {
-      const response = await fetch(`${this.serverUrl}/api/chat-messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(message)
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Message saved to server:', data);
-        return true;
-      }
+        fs.writeFileSync(messagesFile, JSON.stringify(chatMessages, null, 2));
+        console.log('Saved', chatMessages.length, 'messages to file');
     } catch (error) {
-      console.error('Failed to save message to server:', error);
-      // Fallback to localStorage
-      this.saveToLocalStorage(message);
-      return false;
+        console.error('Error saving messages:', error);
     }
-  }
+}, 5000);
 
-  // Save to localStorage as fallback
-  saveToLocalStorage(message) {
-    this.messages.push(message);
-    localStorage.setItem('chatMessages', JSON.stringify(this.messages));
-    this.notifyUpdate();
-  }
+// API Routes
 
-  // Update localStorage
-  updateLocalStorage() {
-    localStorage.setItem('chatMessages', JSON.stringify(this.messages));
-  }
-
-  // Notify all tabs about update
-  notifyUpdate() {
-    const event = new StorageEvent('storage', {
-      key: 'chatMessages',
-      newValue: JSON.stringify(this.messages)
+// Get all chat messages
+app.get('/api/chat-messages', (req, res) => {
+    res.json({
+        success: true,
+        messages: chatMessages,
+        count: chatMessages.length
     });
-    window.dispatchEvent(event);
-  }
+});
 
-  // Sync messages with server
-  async syncMessages() {
+// Add new chat message
+app.post('/api/chat-messages', (req, res) => {
     try {
-      const response = await fetch(`${this.serverUrl}/api/chat-messages/sync`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.messages && data.messages.length > this.messages.length) {
-          this.messages = data.messages;
-          this.updateLocalStorage();
-          this.notifyUpdate();
-          console.log('Synced new messages from server');
+        const message = req.body;
+        
+        // Validate message structure
+        if (!message.content || !message.type) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required fields: content, type'
+            });
         }
-      }
+        
+        // Add timestamp if not provided
+        if (!message.timestamp) {
+            message.timestamp = new Date().toISOString();
+        }
+        
+        // Add unique ID if not provided
+        if (!message.id) {
+            message.id = Date.now() + Math.random();
+        }
+        
+        // Add to messages array
+        chatMessages.push(message);
+        
+        console.log('New message:', {
+            type: message.type,
+            userId: message.userId,
+            content: message.content.substring(0, 50) + '...'
+        });
+        
+        res.json({
+            success: true,
+            message: 'Message saved successfully',
+            messageId: message.id
+        });
+        
     } catch (error) {
-      console.error('Failed to sync messages:', error);
+        console.error('Error saving message:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Internal server error'
+        });
     }
-  }
+});
 
-  // Send message (user or admin)
-  async sendMessage(messageData) {
-    const message = {
-      ...messageData,
-      id: Date.now(),
-      timestamp: new Date().toISOString(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
+// Sync messages (for admin panel)
+app.get('/api/chat-messages/sync', (req, res) => {
+    res.json({
+        success: true,
+        messages: chatMessages,
+        count: chatMessages.length,
+        lastSync: new Date().toISOString()
+    });
+});
 
-    console.log('Sending message:', message);
-
-    // Save to server first
-    const saved = await this.saveMessageToServer(message);
-    
-    // Also save locally for immediate display
-    if (!saved) {
-      this.saveToLocalStorage(message);
-    }
-
-    // Force update immediately
-    this.notifyUpdate();
-
-    return message;
-  }
-
-  // Get messages for specific user
-  getUserMessages(userId) {
-    return this.messages.filter(msg => 
-      (msg.type === 'user' && msg.userId === userId) || 
-      (msg.type === 'admin' && msg.userId === userId)
+// Get messages for specific user
+app.get('/api/chat-messages/user/:userId', (req, res) => {
+    const userId = req.params.userId;
+    const userMessages = chatMessages.filter(msg => 
+        msg.userId === userId || (msg.type === 'admin' && msg.userId === userId)
     );
-  }
+    
+    res.json({
+        success: true,
+        messages: userMessages,
+        count: userMessages.length
+    });
+});
 
-  // Get all unique users
-  getActiveUsers() {
+// Get all unique users
+app.get('/api/chat-users', (req, res) => {
     const users = {};
-    this.messages.forEach(msg => {
-      if (msg.type === 'user' && msg.userId) {
-        if (!users[msg.userId]) {
-          users[msg.userId] = {
-            id: msg.userId,
-            name: msg.userName,
-            email: msg.userEmail,
-            lastMessage: msg.content,
-            lastTime: msg.time,
-            status: 'online',
-            lastSeen: new Date()
-          };
-        } else {
-          users[msg.userId].lastMessage = msg.content;
-          users[msg.userId].lastTime = msg.time;
-          users[msg.userId].lastSeen = new Date();
+    
+    chatMessages.forEach(msg => {
+        if (msg.type === 'user' && msg.userId) {
+            if (!users[msg.userId]) {
+                users[msg.userId] = {
+                    id: msg.userId,
+                    name: msg.userName || 'Unknown',
+                    email: msg.userEmail || 'unknown@example.com',
+                    lastMessage: msg.content,
+                    lastTime: msg.time || new Date().toLocaleTimeString(),
+                    status: 'online',
+                    lastSeen: new Date().toISOString()
+                };
+            } else {
+                users[msg.userId].lastMessage = msg.content;
+                users[msg.userId].lastTime = msg.time || new Date().toLocaleTimeString();
+                users[msg.userId].lastSeen = new Date().toISOString();
+            }
         }
-      }
     });
-    return Object.values(users);
-  }
-}
-
-// Enhanced Real-time Chat System with Server Integration
-class EnhancedRealtimeChat {
-  constructor() {
-    this.chatServer = new ChatServer();
-    this.currentUser = null;
-    this.isAdmin = false;
-    this.init();
-  }
-
-  init() {
-    // Check if admin page
-    if (window.location.pathname.includes('admin-live-chat.html')) {
-      this.isAdmin = true;
-      this.initAdminChat();
-    } else if (window.location.pathname.includes('index.html')) {
-      this.initUserChat();
-    }
-  }
-
-  // Initialize user chat
-  initUserChat() {
-    // Check for existing user info
-    const userInfo = localStorage.getItem('chatUserInfo');
-    if (userInfo) {
-      this.currentUser = JSON.parse(userInfo);
-    }
-
-    // Listen for storage events
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'chatMessages') {
-        this.updateUserChat();
-      }
+    
+    const userList = Object.values(users);
+    
+    res.json({
+        success: true,
+        users: userList,
+        count: userList.length
     });
+});
 
-    this.updateUserChat();
-  }
-
-  // Initialize admin chat
-  initAdminChat() {
-    console.log('Initializing admin chat...');
-    this.loadAdminUsers();
-    this.setupAdminEventListeners();
-
-    // Listen for storage events
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'chatMessages') {
-        console.log('Storage event detected in admin chat');
-        this.updateAdminChat();
-      }
+// Health check
+app.get('/api/health', (req, res) => {
+    res.json({
+        success: true,
+        status: 'Server is running',
+        timestamp: new Date().toISOString(),
+        messages: chatMessages.length
     });
+});
 
-    // Initial load
-    setTimeout(() => {
-      console.log('Initial admin messages:', this.chatServer.messages);
-      this.loadAdminUsers();
-    }, 1000);
-  }
+// Serve static files
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'web', 'login', 'index.html'));
+});
 
-  // Update user chat display
-  updateUserChat() {
-    const chatMessages = document.getElementById('chatMessages');
-    if (!chatMessages) return;
+app.get('/admin-live-chat', (req, res) => {
+    res.sendFile(path.join(__dirname, 'web', 'login', 'admin-live-chat.html'));
+});
 
-    // Clear existing messages
-    chatMessages.innerHTML = '';
-
-    // Get messages from server
-    const messages = this.chatServer.messages;
-
-    // Add all messages
-    messages.forEach(msg => {
-      if (msg.type === 'user' && msg.userId === this.currentUser?.id) {
-        this.addMessageToChat(msg.content, 'sent', msg.time);
-      } else if (msg.type === 'admin') {
-        this.addMessageToChat(msg.content, 'received', msg.time);
-      }
-    });
-  }
-
-  // Add message to chat UI
-  addMessageToChat(text, type, time) {
-    const chatMessages = document.getElementById('chatMessages');
-    if (!chatMessages) return;
-
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${type}`;
+// Start server
+app.listen(PORT, () => {
+    const baseUrl = process.env.NODE_ENV === 'production' 
+        ? `https://cnc-auto-design-1.onrender.com` 
+        : `http://localhost:${PORT}`;
     
-    const messageTime = time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
-    messageDiv.innerHTML = `
-      <div class="message-content">
-        <p>${text}</p>
-        <span class="message-time">${messageTime}</span>
-      </div>
-    `;
-    
-    chatMessages.appendChild(messageDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-  }
+    console.log(`🚀 Chat server running on port ${PORT}`);
+    console.log(`📱 Live chat: ${baseUrl}`);
+    console.log(`👨‍💻 Admin panel: ${baseUrl}/admin-live-chat`);
+    console.log(`📊 API Health: ${baseUrl}/api/health`);
+    console.log(`💬 Messages API: ${baseUrl}/api/chat-messages`);
+    console.log(`👥 Users API: ${baseUrl}/api/chat-users`);
+});
 
-  // Send message from user
-  async sendUserMessage(text) {
-    if (!this.currentUser) {
-      // Get user info from WhatsApp chat form
-      const name = document.getElementById('chatName')?.value;
-      const email = document.getElementById('chatEmail')?.value;
-      
-      if (name && email) {
-        this.currentUser = {
-          id: email,
-          name: name,
-          email: email
-        };
-        localStorage.setItem('chatUserInfo', JSON.stringify(this.currentUser));
-      }
+// Graceful shutdown
+process.on('SIGINT', () => {
+    console.log('\n💾 Saving messages before shutdown...');
+    try {
+        fs.writeFileSync(messagesFile, JSON.stringify(chatMessages, null, 2));
+        console.log('✅ Messages saved successfully');
+    } catch (error) {
+        console.error('❌ Error saving messages:', error);
     }
-
-    if (this.currentUser) {
-      const message = {
-        type: 'user',
-        userId: this.currentUser.id,
-        userName: this.currentUser.name,
-        userEmail: this.currentUser.email,
-        content: text
-      };
-
-      await this.chatServer.sendMessage(message);
-    }
-  }
-
-  // Load admin users
-  loadAdminUsers() {
-    const userList = document.getElementById('userList');
-    if (!userList) {
-      console.log('User list element not found');
-      return;
-    }
-
-    console.log('Loading admin users...');
-    
-    // Get active users from server
-    const users = this.chatServer.getActiveUsers();
-    console.log('Active users found:', users);
-
-    // Display users
-    userList.innerHTML = '';
-    users.forEach(user => {
-      const userItem = document.createElement('div');
-      userItem.className = `user-item online`;
-      userItem.onclick = () => this.selectAdminUser(user);
-      
-      const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase();
-      
-      userItem.innerHTML = `
-        <div class="user-avatar">${initials}</div>
-        <div class="user-info">
-          <p class="user-name">${user.name}</p>
-          <p class="user-email">${user.email}</p>
-        </div>
-        <div class="user-status"></div>
-      `;
-      
-      userList.appendChild(userItem);
-    });
-
-    if (users.length === 0) {
-      userList.innerHTML = '<p style="color: #64748b; text-align: center; padding: 20px;">No active users found</p>';
-    }
-  }
-
-  // Select user in admin chat
-  selectAdminUser(user) {
-    this.selectedUser = user;
-    
-    // Update active state
-    document.querySelectorAll('.user-item').forEach(item => {
-      item.classList.remove('active');
-    });
-    event.currentTarget.classList.add('active');
-    
-    // Load user chat
-    this.loadAdminChat(user);
-  }
-
-  // Load admin chat for specific user
-  loadAdminChat(user) {
-    const chatArea = document.getElementById('chatArea');
-    if (!chatArea) return;
-    
-    const userMessages = this.chatServer.getUserMessages(user.id);
-    
-    chatArea.innerHTML = `
-      <div class="chat-header">
-        <div class="user-avatar">${user.name.split(' ').map(n => n[0]).join('').toUpperCase()}</div>
-        <div class="chat-header-info">
-          <p class="chat-header-name">${user.name}</p>
-          <p class="chat-header-email">${user.email}</p>
-        </div>
-        <div class="user-status"></div>
-      </div>
-      
-      <div class="chat-messages" id="adminChatMessages">
-        ${userMessages.map(msg => `
-          <div class="message ${msg.type === 'admin' ? 'admin' : 'user'}">
-            <p class="message-content">${msg.content}</p>
-            <span class="message-time">${msg.time}</span>
-          </div>
-        `).join('')}
-      </div>
-      
-      <div class="chat-input-container">
-        <input type="text" class="chat-input" id="adminMessageInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
-        <button class="send-btn" onclick="sendAdminMessage()">Send</button>
-      </div>
-    `;
-    
-    // Scroll to bottom
-    const messagesContainer = document.getElementById('adminChatMessages');
-    if (messagesContainer) {
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    }
-  }
-
-  // Setup admin event listeners
-  setupAdminEventListeners() {
-    window.sendAdminMessage = async () => {
-      const input = document.getElementById('adminMessageInput');
-      const message = input.value.trim();
-      
-      if (message && this.selectedUser) {
-        const adminMessage = {
-          type: 'admin',
-          userId: this.selectedUser.id,
-          content: message
-        };
-
-        await this.chatServer.sendMessage(adminMessage);
-        input.value = '';
-      }
-    };
-
-    window.handleKeyPress = (event) => {
-      if (event.key === 'Enter') {
-        window.sendAdminMessage();
-      }
-    };
-  }
-
-  // Update admin chat
-  updateAdminChat() {
-    if (this.selectedUser) {
-      this.loadAdminChat(this.selectedUser);
-    }
-    this.loadAdminUsers();
-  }
-}
-
-// Initialize the enhanced chat system
-const enhancedChat = new EnhancedRealtimeChat();
-
-// Global functions for HTML
-window.sendUserMessage = (text) => {
-  enhancedChat.sendUserMessage(text);
-};
-
-// Override existing WhatsApp chat functions
-if (typeof window.sendMessage === 'function') {
-  const originalSendMessage = window.sendMessage;
-  window.sendMessage = function() {
-    const message = document.getElementById('whatsappInput').value.trim();
-    if (message) {
-      window.sendUserMessage(message);
-      originalSendMessage();
-    }
-  };
-}
+    process.exit(0);
+});
