@@ -441,7 +441,7 @@
       <div class="card">
         <p>Windows installer download:</p>
         <div class="cta">
-          <a class="btn btn-primary" href="https://github.com/cncautodesignbd-prog/cnc-auto-design/releases/download/v1.0.0/mysetup.exe">Download .exe (Coming Soon)</a>
+          <a class="btn btn-primary" href="https://github.com/cncautodesignbd-prog/cnc-auto-design/releases/download/v1.0.0/mysetup.exe">Download</a>
           <a class="btn btn-ghost" href="login.html">Activate License</a>
         </div>
       </div>
@@ -449,16 +449,10 @@
       <!-- Help Section -->
       <div class="card" style="margin-top: 20px;">
         <h3 style="margin-bottom: 15px;">Need Help?</h3>
-        <p style="margin-bottom: 15px;">Get support through WhatsApp Live Chat or Email:</p>
+        <p style="margin-bottom: 15px;">Get support through Live Chat or Email:</p>
         
         <div class="cta">
-          <a href="https://wa.me/8801967549210" class="btn btn-primary" target="_blank" rel="noopener" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.465 3.488"/>
-            </svg>
-            <span>WhatsApp</span>
-          </a>
-          <a href="https://wa.me/8801967549210?text=Hi%20I%20need%20live%20chat%20support" class="btn btn-primary" target="_blank" rel="noopener" style="display: flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, #25D366, #128C7E);">
+          <a href="#" class="btn btn-primary" id="liveChatBtn" style="display: flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, #25D366, #128C7E); cursor: pointer;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
               <path d="M8 10h.01M12 10h.01M16 10h.01"/>
@@ -490,10 +484,11 @@
         <div>
           <h4>About</h4>
           <p style="margin:0">CNC Auto Design — Convert images to DXF/SVG quickly. Smart tools for mobile and desktop.</p>
+          <p style="margin:4px 0 0; font-size: 12px; opacity: 0.8;">Developer: MD MARUF HOSSEN 🇧🇩</p>
         </div>
         <div>
           <h4>Contact</h4>
-          <p style="margin:0 0 6px">Email: <a href="mailto:cncautodesignbd@gmail.com">cncautodesignbd@gmail.com</a></p>
+          <p style="margin:0 0 6px">Email: <a href="mailto:cncautodesign@gmail.com">cncautodesign@gmail.com</a></p>
           <p style="margin:0">Support: 10am–8pm (GMT+6)</p>
         </div>
         <div>
@@ -848,6 +843,974 @@
         }catch(e){ console.error(e); alert('Could not send request'); return false; }
       };
     })();
+  </script>
+
+  <!-- Live Chat Modal -->
+  <div id="liveChatModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Live Chat Support</h2>
+        <span class="close-button">&times;</span>
+      </div>
+      <form id="liveChatForm">
+        <div class="form-group">
+          <label for="chatName">Your Name:</label>
+          <input type="text" id="chatName" required placeholder="Enter your name">
+        </div>
+        <div class="form-group">
+          <label for="chatEmail">Your Email:</label>
+          <input type="email" id="chatEmail" required placeholder="Enter your email">
+        </div>
+        <div class="form-group">
+          <label for="chatLanguage">Preferred Language:</label>
+          <select id="chatLanguage" required>
+            <option value="en">English</option>
+            <option value="bn">বাংলা</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Send Message</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- WhatsApp Chat Interface -->
+  <div id="whatsappModal" class="modal" style="display: none;">
+    <div class="whatsapp-container">
+      <div class="whatsapp-header">
+        <div class="header-left">
+          <div class="logo">
+            <img src="cnc_auto_design.png" alt="CNC Auto Design" width="30" height="30">
+          </div>
+          <div class="header-title">
+            <h3>CNC Auto Design</h3>
+            <p>Help Now or Live Chat</p>
+          </div>
+        </div>
+        <div class="header-right">
+          <span class="close-button">&times;</span>
+        </div>
+      </div>
+      
+      <div class="whatsapp-chat">
+        <div class="chat-messages" id="chatMessages">
+          <div class="message received">
+            <div class="message-content">
+              <p>Hello! 👋 Welcome to CNC Auto Design Support. How can we help you today?</p>
+              <span class="message-time">10:00 AM</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="chat-input-container">
+          <div class="input-actions">
+            <button class="action-btn">📎</button>
+            <button class="action-btn">📷</button>
+          </div>
+          <div class="input-field">
+            <input type="text" id="whatsappInput" placeholder="Type a message..." />
+            <button id="sendWhatsAppMessage" class="send-btn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 7z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    /* Modal Styles */
+    .modal {
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      backdrop-filter: blur(5px);
+    }
+    
+    .modal-content {
+      background: linear-gradient(135deg, #1a1f2e, #2d3748);
+      margin: 10% auto;
+      padding: 0;
+      border: 1px solid #4a5568;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+      animation: modalSlideIn 0.3s ease-out;
+    }
+    
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid #4a5568;
+    }
+    
+    .modal-header h2 {
+      margin: 0;
+      color: #e2e8f0;
+      font-size: 24px;
+    }
+    
+    .close-button {
+      color: #a0aec0;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+    
+    .close-button:hover {
+      color: #e2e8f0;
+      background-color: rgba(255,255,255,0.1);
+    }
+    
+    #liveChatForm {
+      padding: 20px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #e2e8f0;
+      font-weight: 600;
+    }
+    
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #4a5568;
+      border-radius: 8px;
+      background: #2d3748;
+      color: #e2e8f0;
+      font-size: 16px;
+      transition: border-color 0.2s;
+      box-sizing: border-box;
+    }
+    
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #60a5fa;
+      box-shadow: 0 0 0 3px rgba(96,165,250,0.1);
+    }
+    
+    .form-group textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+    
+    #liveChatForm .btn-primary {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #60a5fa, #22d3ee);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    #liveChatForm .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(96,165,250,0.3);
+    }
+    
+    /* WhatsApp Emergency Modal Styles */
+    .modal-body {
+      padding: 20px;
+    }
+    
+    .emergency-message p {
+      color: #e2e8f0;
+      margin-bottom: 20px;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+    
+    .contact-info {
+      background: rgba(96,165,250,0.1);
+      border: 1px solid #60a5fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 25px;
+    }
+    
+    .info-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+      color: #e2e8f0;
+      font-size: 15px;
+    }
+    
+    .info-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .info-item strong {
+      margin-right: 10px;
+      color: #60a5fa;
+    }
+    
+    .whatsapp-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+    
+    .btn-success {
+      background: linear-gradient(135deg, #25D366, #128C7E);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn-success:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(37,211,102,0.3);
+    }
+    
+    .btn-ghost {
+      background: transparent;
+      color: #a0aec0;
+      border: 1px solid #4a5568;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-ghost:hover {
+      background: rgba(255,255,255,0.1);
+      color: #e2e8f0;
+    }
+    
+    /* WhatsApp Chat Interface Styles */
+    .whatsapp-container {
+      width: 90%;
+      max-width: 500px;
+      height: 600px;
+      background: #ECE5DD;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      animation: modalSlideIn 0.3s ease-out;
+    }
+    
+    /* Desktop full screen WhatsApp */
+    @media (min-width: 769px) {
+      .whatsapp-container {
+        width: 100%;
+        height: 100vh;
+        max-width: none;
+        border-radius: 0;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+      }
+      
+      .whatsapp-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 10;
+        background: #075E54;
+      }
+      
+      .whatsapp-chat {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding-top: 70px;
+        padding-bottom: 70px;
+      }
+      
+      .chat-messages {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        max-height: calc(100vh - 140px);
+      }
+      
+      .chat-input-container {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 15px 20px;
+        background: #F0F2F5;
+        border-top: 1px solid #E9EDEF;
+        z-index: 10;
+      }
+      
+      .input-field {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 25px;
+        padding: 8px 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+      
+      .input-field input {
+        flex: 1;
+        border: none;
+        outline: none;
+        font-size: 16px;
+        background: transparent;
+        padding: 8px;
+      }
+      
+      .input-field input::placeholder {
+        color: #999;
+      }
+      
+      .send-btn {
+        width: 40px;
+        height: 40px;
+        background: #075E54;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      }
+      
+      .send-btn:hover {
+        background: #054F3A;
+        transform: scale(1.05);
+      }
+      
+      .action-btn {
+        width: 35px;
+        height: 35px;
+        font-size: 20px;
+        background: none;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+      }
+      
+      .action-btn:hover {
+        background: rgba(0,0,0,0.05);
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .whatsapp-container {
+        width: 95%;
+        height: 80vh;
+        max-width: 400px;
+      }
+    }
+    
+    .whatsapp-header {
+      background: #075E54;
+      color: white;
+      padding: 10px 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 60px;
+      box-sizing: border-box;
+    }
+    
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .header-right {
+      display: flex;
+      align-items: center;
+    }
+    
+    .logo {
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: white;
+      flex-shrink: 0;
+    }
+    
+    .logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 6px;
+    }
+    
+    .header-title h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: white;
+    }
+    
+    .header-title p {
+      margin: 0;
+      font-size: 12px;
+      opacity: 0.9;
+      color: white;
+    }
+    
+    .header-actions .close-button {
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: background 0.2s;
+    }
+    
+    .header-actions .close-button:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    
+    .whatsapp-chat {
+      height: calc(100% - 70px);
+      display: flex;
+      flex-direction: column;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23ECE5DD"/><pattern id="p" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="%23B3B3B3" opacity="0.1"/></pattern><rect width="100" height="100" fill="url(%23p)"/></svg>');
+    }
+    
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .message {
+      max-width: 75%;
+      padding: 8px 12px;
+      border-radius: 12px;
+      position: relative;
+    }
+    
+    .message.received {
+      align-self: flex-start;
+      background: #FFFFFF;
+      color: #111B21;
+      border-bottom-left-radius: 2px;
+    }
+    
+    .message.sent {
+      align-self: flex-end;
+      background: #DCF8C6;
+      color: #111B21;
+      border-bottom-right-radius: 2px;
+    }
+    
+    .message-content p {
+      margin: 0;
+      word-wrap: break-word;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    
+    .message-time {
+      font-size: 11px;
+      color: #667785;
+      margin-top: 4px;
+      display: block;
+    }
+    
+    .chat-input-container {
+      background: #F0F2F5;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-top: 1px solid #E9EDEF;
+    }
+    
+    .input-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .action-btn {
+      width: 35px;
+      height: 35px;
+      border: none;
+      background: none;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    
+    .action-btn:hover {
+      background: rgba(0,0,0,0.05);
+    }
+    
+    .input-field {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      background: white;
+      border-radius: 20px;
+      padding: 6px 12px;
+      gap: 8px;
+    }
+    
+    .input-field input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 14px;
+      background: transparent;
+    }
+    
+    .send-btn {
+      width: 35px;
+      height: 35px;
+      border: none;
+      background: #075E54;
+      color: white;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    
+    .send-btn:hover {
+      background: #054F3A;
+    }
+    
+    .send-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    /* Responsive for mobile */
+    @media (max-width: 600px) {
+      .whatsapp-container {
+        width: 100%;
+        height: 100vh;
+        max-width: none;
+        border-radius: 0;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+      }
+      
+      .message {
+        max-width: 85%;
+      }
+      
+      .whatsapp-header {
+        padding: 12px;
+      }
+      
+      .contact-info h3 {
+        font-size: 14px;
+      }
+      
+      .contact-info p {
+        font-size: 12px;
+      }
+      
+      .chat-input-container {
+        padding: 10px 15px;
+      }
+      
+      .input-field input {
+        font-size: 16px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .whatsapp-header {
+        padding: 10px;
+      }
+      
+      .avatar {
+        width: 35px;
+        height: 35px;
+      }
+      
+      .logo {
+        width: 35px;
+        height: 35px;
+      }
+      
+      .contact-info h3 {
+        font-size: 13px;
+      }
+      
+      .contact-info p {
+        font-size: 11px;
+      }
+      
+      .chat-messages {
+        padding: 15px;
+        flex: 1;
+        overflow-y: auto;
+      }
+      
+      .message {
+        max-width: 90%;
+        padding: 6px 10px;
+      }
+      
+      .message-content p {
+        font-size: 13px;
+      }
+      
+      .message-time {
+        font-size: 10px;
+      }
+      
+      .chat-input-container {
+        padding: 8px 12px;
+        position: sticky;
+        bottom: 0;
+        background: #F0F2F5;
+        border-top: 1px solid #E9EDEF;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      
+      .input-actions {
+        display: flex;
+        gap: 8px;
+      }
+      
+      .action-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 18px;
+        background: none;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .send-btn {
+        width: 30px;
+        height: 30px;
+        background: #075E54;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .input-field {
+        flex: 1;
+        background: white;
+        border-radius: 20px;
+        padding: 5px 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 35px;
+      }
+      
+      .input-field input {
+        font-size: 16px;
+        flex: 1;
+        border: none;
+        outline: none;
+        background: transparent;
+        padding: 5px;
+      }
+      
+      .input-field input::placeholder {
+        color: #999;
+      }
+      
+      .whatsapp-chat {
+        height: calc(100% - 70px);
+        display: flex;
+        flex-direction: column;
+      }
+    }
+  </style>
+
+  <script src="online-chat.js"></script>
+  <script>
+    // Live Chat Modal Functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      const modal = document.getElementById('liveChatModal');
+      const whatsappModal = document.getElementById('whatsappModal');
+      const openBtn = document.getElementById('liveChatBtn');
+      const closeBtns = document.querySelectorAll('.close-button');
+      const form = document.getElementById('liveChatForm');
+      
+      // Open modal
+      openBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+      });
+      
+      // Close modals
+      closeBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+          const parentModal = btn.closest('.modal');
+          parentModal.style.display = 'none';
+          document.body.style.overflow = 'auto';
+        });
+      });
+      
+      // Close modal when clicking outside
+      window.addEventListener('click', function(e) {
+        if (e.target === modal) {
+          modal.style.display = 'none';
+          document.body.style.overflow = 'auto';
+        }
+        if (e.target === whatsappModal) {
+          whatsappModal.style.display = 'none';
+          document.body.style.overflow = 'auto';
+        }
+      });
+      
+      // Handle form submission
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const name = document.getElementById('chatName').value;
+        const email = document.getElementById('chatEmail').value;
+        const language = document.getElementById('chatLanguage').value;
+        
+        // Create message data
+        const messageData = {
+          name: name,
+          email: email,
+          language: language,
+          timestamp: new Date().toISOString(),
+          type: 'live_chat'
+        };
+        
+        // Save to localStorage
+        const messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
+        messages.push(messageData);
+        localStorage.setItem('chatMessages', JSON.stringify(messages));
+        
+        // Close first modal and open WhatsApp chat
+        modal.style.display = 'none';
+        whatsappModal.style.display = 'block';
+        
+        // Add initial message with user info
+        const chatMessages = document.getElementById('chatMessages');
+        const welcomeMessage = language === 'bn' 
+          ? `ধন্যবাদ ${name}! আমরা আপনার তথ্য পেয়েছি। আমাদের প্রতিনিধি শীঘ্রই আপনার সাথে যোগাযোগ করবে।\n\nইমেইল: ${email}`
+          : `Thank you ${name}! We've received your information.\n\nEmail: ${email}\n\nOur representative will contact you shortly.`;
+        
+        addMessageToChat(welcomeMessage, 'received');
+        
+        // Reset form
+        form.reset();
+        
+        // Log for debugging
+        console.log('Chat message received:', messageData);
+      });
+      
+      // WhatsApp chat functionality
+      const whatsappInput = document.getElementById('whatsappInput');
+      const sendBtn = document.getElementById('sendWhatsAppMessage');
+      
+      function addMessageToChat(text, type) {
+        const chatMessages = document.getElementById('chatMessages');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${type}`;
+        
+        const now = new Date();
+        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        messageDiv.innerHTML = `
+          <div class="message-content">
+            <p>${text}</p>
+            <span class="message-time">${timeString}</span>
+          </div>
+        `;
+        
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+      
+      function sendMessage() {
+        const message = whatsappInput.value.trim();
+        if (message) {
+          // Add user message
+          addMessageToChat(message, 'sent');
+          
+          // Clear input
+          whatsappInput.value = '';
+          
+          // Simulate support response
+          setTimeout(() => {
+            const responses = [
+              "Thank you for your message! You will be connected to our customer care shortly. Please wait a few moments.",
+              "We're connecting you to our customer care team. Please wait while we transfer your chat.",
+              "Your message has been received. You will be connected to our customer care representative in a few moments.",
+              "Thank you for reaching out! Our customer care team will join this chat shortly. Please wait."
+            ];
+            const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+            addMessageToChat(randomResponse, 'received');
+          }, 1500);
+        }
+      }
+      
+      // Send message on button click
+      sendBtn.addEventListener('click', sendMessage);
+      
+      // Send message on Enter key
+      whatsappInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+      
+      // WhatsApp modal close button
+      document.getElementById('closeEmergencyModal').addEventListener('click', function() {
+        whatsappModal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+      });
+      
+      // Success notification function
+      function showSuccessNotification(message) {
+        const successDiv = document.createElement('div');
+        successDiv.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: linear-gradient(135deg, #22c55e, #16a34a);
+          color: white;
+          padding: 15px 20px;
+          border-radius: 12px;
+          box-shadow: 0 10px 30px rgba(34,197,94,0.3);
+          z-index: 1001;
+          animation: slideIn 0.4s ease;
+          border: 1px solid #34d399;
+        `;
+        successDiv.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+            </svg>
+            <strong>${message}</strong>
+          </div>
+        `;
+        
+        document.body.appendChild(successDiv);
+        
+        // Remove success message after 5 seconds
+        setTimeout(() => {
+          if (successDiv.parentNode) {
+            successDiv.style.animation = 'slideIn 0.4s ease reverse';
+            setTimeout(() => successDiv.remove(), 400);
+          }
+        }, 5000);
+      }
+      
+      // Add slideIn animation
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateX(100%);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    });
   </script>
 </body>
 </html>

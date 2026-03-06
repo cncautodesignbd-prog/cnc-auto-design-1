@@ -730,6 +730,52 @@
     
     // Call on page load
     document.addEventListener('DOMContentLoaded', loadPaymentSettings);
+    
+    // Listen for settings updates from admin panel
+    window.addEventListener('settingsUpdated', function(event) {
+      console.log('Settings updated:', event.detail);
+      // Update payment form with new settings
+      const settings = event.detail;
+      if(settings.bkash) accountNumbers.bkash = settings.bkash;
+      if(settings.nagad) accountNumbers.nagad = settings.nagad;
+      if(settings.debitCard) accountNumbers.debit = settings.debitCard;
+      if(settings.masterCard) accountNumbers.master = settings.masterCard;
+      
+      // Update prices if they exist
+      if(settings.price6 && settings.price12){
+        const basicPriceEl = document.querySelector('#plan-basic .price');
+        const premiumPriceEl = document.querySelector('#plan-premium .price');
+        if(basicPriceEl) basicPriceEl.textContent = '৳' + settings.price6;
+        if(premiumPriceEl) premiumPriceEl.textContent = '৳' + settings.price12;
+      }
+      
+      console.log('Payment settings updated in real-time:', accountNumbers);
+    });
+    
+    // Also check for localStorage changes (for same-tab updates)
+    window.addEventListener('storage', function(event) {
+      if(event.key === 'adminSettings') {
+        console.log('Settings changed in localStorage:', event.newValue);
+        try {
+          const settings = JSON.parse(event.newValue || '{}');
+          if(settings.bkash) accountNumbers.bkash = settings.bkash;
+          if(settings.nagad) accountNumbers.nagad = settings.nagad;
+          if(settings.debitCard) accountNumbers.debit = settings.debitCard;
+          if(settings.masterCard) accountNumbers.master = settings.masterCard;
+          
+          if(settings.price6 && settings.price12){
+            const basicPriceEl = document.querySelector('#plan-basic .price');
+            const premiumPriceEl = document.querySelector('#plan-premium .price');
+            if(basicPriceEl) basicPriceEl.textContent = '৳' + settings.price6;
+            if(premiumPriceEl) premiumPriceEl.textContent = '৳' + settings.price12;
+          }
+          
+          console.log('Payment settings updated from localStorage:', accountNumbers);
+        } catch(e) {
+          console.error('Error parsing settings from localStorage:', e);
+        }
+      }
+    });
   </script>
   </head>
 <body>

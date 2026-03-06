@@ -229,8 +229,9 @@
         <a href="#" class="side-item" onclick="closeSideMenu(); goHome()">🏠 Home</a>
         <a href="#" class="side-item" onclick="closeSideMenu(); openActiveList()">👥 Active Users <span id="badge-active" class="badge">0</span></a>
         <a href="#" class="side-item" onclick="closeSideMenu(); openPaymentStats()">💳 Payments Summary</a>
-        <a href="#" class="side-item" onclick="closeSideMenu(); openInsights()">� Insights</a>
+        <a href="#" class="side-item" onclick="closeSideMenu(); openInsights()">📊 Insights</a>
         <a href="#" class="side-item" onclick="closeSideMenu(); openSettings()">⚙️ Settings</a>
+        <a href="#" class="side-item" onclick="closeSideMenu(); openLiveChat()">💬 Live Chat</a>
       </div>
       <div class="side-foot">
         <a href="#" class="side-item" onclick="closeSideMenu(); alert('Logout (demo)')">↩️ Logout</a>
@@ -845,7 +846,7 @@
       document.getElementById('settingsOverlay').style.display='grid';
       
       // Load saved settings from server
-      fetch('http://localhost:3000/api/settings')
+      fetch('https://cnc-auto-design-1.onrender.com/api/settings')
         .then(response => response.json())
         .then(settings => {
           if(settings.price6) document.getElementById('set-price-6').value = settings.price6;
@@ -890,7 +891,7 @@
         masterCard: masterCard
       };
       
-      fetch('http://localhost:3000/api/settings', {
+      fetch('https://cnc-auto-design-1.onrender.com/api/settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -903,6 +904,12 @@
           console.log('Settings saved to server:', settings);
           closeSettings();
           alert('Settings saved successfully!');
+          
+          // Trigger a custom event to notify other pages
+          window.dispatchEvent(new CustomEvent('settingsUpdated', { detail: settings }));
+          
+          // Also save to localStorage for immediate local updates
+          localStorage.setItem('adminSettings', JSON.stringify(settings));
         } else {
           console.error('Failed to save settings:', data.message);
           alert('Failed to save settings!');
@@ -1342,6 +1349,11 @@
         console.error('Error saving user details:', e);
         alert('Failed to save user details!');
       }
+    }
+    
+    function openLiveChat() {
+      // Open admin live chat interface
+      window.open('admin-live-chat.html', '_blank');
     }
   </script>
 </body>
