@@ -1617,7 +1617,7 @@
     }
   </style>
 
-  <script src="online-chat.js"></script>
+  <script src="chat-server.js"></script>
   <script>
     // Live Chat Modal Functionality
     document.addEventListener('DOMContentLoaded', function() {
@@ -1626,6 +1626,15 @@
       const openBtn = document.getElementById('liveChatBtn');
       const closeBtns = document.querySelectorAll('.close-button');
       const form = document.getElementById('liveChatForm');
+      
+      // Enhanced chat system will be available after chat-server.js loads
+      let enhancedChat = null;
+      
+      // Wait for enhanced chat to initialize
+      setTimeout(() => {
+        enhancedChat = window.enhancedChat;
+        console.log('Enhanced chat system loaded in index.html');
+      }, 500);
       
       // Open modal
       openBtn.addEventListener('click', function(e) {
@@ -1663,6 +1672,14 @@
         const email = document.getElementById('chatEmail').value;
         const language = document.getElementById('chatLanguage').value;
         
+        // Save user info to localStorage for enhanced chat system
+        const userInfo = {
+          id: email,
+          name: name,
+          email: email
+        };
+        localStorage.setItem('chatUserInfo', JSON.stringify(userInfo));
+        
         // Create message data
         const messageData = {
           name: name,
@@ -1672,7 +1689,7 @@
           type: 'live_chat'
         };
         
-        // Save to localStorage
+        // Save to localStorage as fallback
         const messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
         messages.push(messageData);
         localStorage.setItem('chatMessages', JSON.stringify(messages));
@@ -1694,6 +1711,7 @@
         
         // Log for debugging
         console.log('Chat message received:', messageData);
+        console.log('User info saved for enhanced chat:', userInfo);
       });
       
       // WhatsApp chat functionality
@@ -1722,13 +1740,35 @@
       function sendMessage() {
         const message = whatsappInput.value.trim();
         if (message) {
-          // Add user message
+          // Add user message to UI
           addMessageToChat(message, 'sent');
+          
+          // Send message through enhanced chat system
+          if (enhancedChat) {
+            enhancedChat.sendUserMessage(message);
+            console.log('Message sent through enhanced chat system');
+          } else {
+            console.log('Enhanced chat not ready, using fallback');
+            // Fallback to localStorage if enhanced chat is not ready
+            const userInfo = JSON.parse(localStorage.getItem('chatUserInfo') || '{}');
+            const messageData = {
+              type: 'user',
+              userId: userInfo.email || 'anonymous',
+              userName: userInfo.name || 'Anonymous',
+              userEmail: userInfo.email || 'anonymous@example.com',
+              content: message
+            };
+            
+            // Save to localStorage
+            const messages = JSON.parse(localStorage.getItem('chatMessages') || '[]');
+            messages.push(messageData);
+            localStorage.setItem('chatMessages', JSON.stringify(messages));
+          }
           
           // Clear input
           whatsappInput.value = '';
           
-          // Simulate support response
+          // Show connection message
           setTimeout(() => {
             const responses = [
               "Thank you for your message! You will be connected to our customer care shortly. Please wait a few moments.",

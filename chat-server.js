@@ -1,6 +1,7 @@
 // Chat Server Integration - Real-time messaging with server storage
 class ChatServer {
   constructor() {
+    // Use production server for online deployment
     this.serverUrl = 'https://cnc-auto-design-1.onrender.com';
     this.messages = [];
     this.init();
@@ -114,6 +115,8 @@ class ChatServer {
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
+    console.log('Sending message:', message);
+
     // Save to server first
     const saved = await this.saveMessageToServer(message);
     
@@ -121,6 +124,9 @@ class ChatServer {
     if (!saved) {
       this.saveToLocalStorage(message);
     }
+
+    // Force update immediately
+    this.notifyUpdate();
 
     return message;
   }
@@ -198,15 +204,23 @@ class EnhancedRealtimeChat {
 
   // Initialize admin chat
   initAdminChat() {
+    console.log('Initializing admin chat...');
     this.loadAdminUsers();
     this.setupAdminEventListeners();
 
     // Listen for storage events
     window.addEventListener('storage', (e) => {
       if (e.key === 'chatMessages') {
+        console.log('Storage event detected in admin chat');
         this.updateAdminChat();
       }
     });
+
+    // Initial load
+    setTimeout(() => {
+      console.log('Initial admin messages:', this.chatServer.messages);
+      this.loadAdminUsers();
+    }, 1000);
   }
 
   // Update user chat display
@@ -284,10 +298,16 @@ class EnhancedRealtimeChat {
   // Load admin users
   loadAdminUsers() {
     const userList = document.getElementById('userList');
-    if (!userList) return;
+    if (!userList) {
+      console.log('User list element not found');
+      return;
+    }
 
+    console.log('Loading admin users...');
+    
     // Get active users from server
     const users = this.chatServer.getActiveUsers();
+    console.log('Active users found:', users);
 
     // Display users
     userList.innerHTML = '';
@@ -309,6 +329,10 @@ class EnhancedRealtimeChat {
       
       userList.appendChild(userItem);
     });
+
+    if (users.length === 0) {
+      userList.innerHTML = '<p style="color: #64748b; text-align: center; padding: 20px;">No active users found</p>';
+    }
   }
 
   // Select user in admin chat

@@ -1,6 +1,7 @@
 // Chat Server Integration - Real-time messaging with server storage
 class ChatServer {
   constructor() {
+    // Use production server for online deployment
     this.serverUrl = 'https://cnc-auto-design-1.onrender.com';
     this.messages = [];
     this.init();

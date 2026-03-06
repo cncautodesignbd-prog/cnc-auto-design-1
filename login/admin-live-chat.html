@@ -347,6 +347,7 @@
       <div class="sidebar-header">
         <h3>Active Users</h3>
         <button onclick="testMessage()" style="margin-left: auto; background: #22c55e; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Test</button>
+        <button onclick="forceSync()" style="margin-left: 4px; background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Sync</button>
       </div>
       <div class="user-list" id="userList">
         <!-- Users will be loaded here -->
@@ -361,67 +362,30 @@
     </div>
   </div>
 
+  <script src="chat-server.js"></script>
   <script>
-    // Mock data for demonstration
-    const mockUsers = [
-      {
-        id: 1,
-        name: "John Doe",
-        email: "john@example.com",
-        status: "online",
-        messages: [
-          { type: "user", content: "Hello, I need help with my account", time: "10:30 AM" },
-          { type: "admin", content: "Hello John! How can I help you today?", time: "10:31 AM" },
-          { type: "user", content: "I can't access my downloads", time: "10:32 AM" }
-        ]
-      },
-      {
-        id: 2,
-        name: "Jane Smith",
-        email: "jane@example.com",
-        status: "online",
-        messages: [
-          { type: "user", content: "Hi, I have a question about pricing", time: "9:45 AM" },
-          { type: "admin", content: "Hi Jane! I'd be happy to help with pricing questions.", time: "9:46 AM" }
-        ]
-      },
-      {
-        id: 3,
-        name: "Mike Johnson",
-        email: "mike@example.com",
-        status: "offline",
-        messages: []
-      }
-    ];
-
+    let onlineChat;
     let selectedUser = null;
 
     function initializeChat() {
-      loadUsers();
+      // Enhanced chat system is already initialized by chat-server.js
+      onlineChat = window.enhancedChat;
+      console.log('Admin chat initialized with enhanced system');
+      
+      // Load users after a short delay to ensure server connection
+      setTimeout(() => {
+        loadUsers();
+      }, 1000);
     }
 
     function loadUsers() {
-      const userList = document.getElementById('userList');
-      userList.innerHTML = '';
-
-      mockUsers.forEach(user => {
-        const userItem = document.createElement('div');
-        userItem.className = `user-item ${user.status === 'online' ? 'online' : ''}`;
-        userItem.onclick = () => selectUser(user);
-        
-        const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase();
-        
-        userItem.innerHTML = `
-          <div class="user-avatar">${initials}</div>
-          <div class="user-info">
-            <p class="user-name">${user.name}</p>
-            <p class="user-email">${user.email}</p>
-          </div>
-          <div class="user-status ${user.status === 'offline' ? 'offline' : ''}"></div>
-        `;
-        
-        userList.appendChild(userItem);
-      });
+      if (!onlineChat) {
+        console.log('Chat system not ready yet');
+        return;
+      }
+      
+      console.log('Loading users from enhanced chat system...');
+      onlineChat.loadAdminUsers();
     }
 
     function selectUser(user) {
@@ -433,42 +397,9 @@
       });
       event.currentTarget.classList.add('active');
       
-      // Load chat
-      loadChat(user);
-    }
-
-    function loadChat(user) {
-      const chatArea = document.getElementById('chatArea');
-      
-      chatArea.innerHTML = `
-        <div class="chat-header">
-          <div class="user-avatar">${user.name.split(' ').map(n => n[0]).join('').toUpperCase()}</div>
-          <div class="chat-header-info">
-            <p class="chat-header-name">${user.name}</p>
-            <p class="chat-header-email">${user.email}</p>
-          </div>
-          <div class="user-status ${user.status === 'offline' ? 'offline' : ''}"></div>
-        </div>
-        
-        <div class="chat-messages" id="chatMessages">
-          ${user.messages.map(msg => `
-            <div class="message ${msg.type}">
-              <p class="message-content">${msg.content}</p>
-              <span class="message-time">${msg.time}</span>
-            </div>
-          `).join('')}
-        </div>
-        
-        <div class="chat-input-container">
-          <input type="text" class="chat-input" id="messageInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
-          <button class="send-btn" onclick="sendMessage()">Send</button>
-        </div>
-      `;
-      
-      // Scroll to bottom
-      const messagesContainer = document.getElementById('chatMessages');
-      if (messagesContainer) {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      // Load chat using enhanced system
+      if (onlineChat) {
+        onlineChat.selectAdminUser(user);
       }
     }
 
@@ -476,27 +407,9 @@
       const input = document.getElementById('messageInput');
       const message = input.value.trim();
       
-      if (message && selectedUser) {
-        // Add message to current chat
-        const messagesContainer = document.getElementById('chatMessages');
-        const now = new Date();
-        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
-        const messageElement = document.createElement('div');
-        messageElement.className = 'message admin';
-        messageElement.innerHTML = `
-          <p class="message-content">${message}</p>
-          <span class="message-time">${timeString}</span>
-        `;
-        
-        messagesContainer.appendChild(messageElement);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        
-        // Clear input
-        input.value = '';
-        
-        // Here you would normally send the message to your backend
-        console.log('Message sent to', selectedUser.name, ':', message);
+      if (message && selectedUser && onlineChat) {
+        // Use enhanced chat system to send message
+        onlineChat.sendAdminMessage();
       }
     }
 
@@ -506,18 +419,33 @@
       }
     }
 
+    function forceSync() {
+      console.log('Force sync called');
+      if (onlineChat && onlineChat.chatServer) {
+        onlineChat.chatServer.syncMessages();
+        onlineChat.loadAdminUsers();
+        alert('Sync completed! Check console for details.');
+      } else {
+        alert('Chat system not ready yet. Please try again.');
+      }
+    }
+
     function testMessage() {
-      // Create a test user message
-      const testUserMessage = {
-        type: 'user',
-        userId: 'test@example.com',
-        userName: 'Test User',
-        userEmail: 'test@example.com',
-        content: 'This is a test message from user'
-      };
-      
-      enhancedChat.chatServer.sendMessage(testUserMessage);
-      alert('Test message sent! Check console for details.');
+      if (onlineChat && onlineChat.chatServer) {
+        // Create a test user message
+        const testUserMessage = {
+          type: 'user',
+          userId: 'test@example.com',
+          userName: 'Test User',
+          userEmail: 'test@example.com',
+          content: 'This is a test message from user at ' + new Date().toLocaleTimeString()
+        };
+        
+        onlineChat.chatServer.sendMessage(testUserMessage);
+        alert('Test message sent! Check console for details.');
+      } else {
+        alert('Chat system not ready yet. Please try again.');
+      }
     }
 
     function goBack() {
@@ -525,13 +453,10 @@
       // Or navigate back to admin panel
       // window.location.href = 'admin.html';
     }
-  </script>
-  <script src="online-chat.js"></script>
-  <script>
-    // Admin Live Chat specific functionality
+
+    // Initialize when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
-      // Online chat system is already initialized by online-chat.js
-      console.log('Admin Live Chat initialized with online storage');
+      initializeChat();
     });
   </script>
 </body>
