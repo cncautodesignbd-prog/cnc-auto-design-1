@@ -525,6 +525,15 @@ app.get('/admin-chat', (req, res) => {
     res.sendFile(path.join(__dirname, 'login', 'admin-live-chat.html'));
 });
 
+// Main admin panel route
+app.get('/main-admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'login', 'admin.html'));
+});
+
+app.get('/login/admin.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'login', 'admin.html'));
+});
+
 // Start server
 app.listen(PORT, () => {
     const baseUrl = process.env.NODE_ENV === 'production' 
