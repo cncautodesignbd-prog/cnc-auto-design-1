@@ -156,28 +156,37 @@
 
   </style>
 
-  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js"></script>
+  <script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+  import { getAuth } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+  import { getFirestore } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyBnv7vkXL4clxbTI4ThSGS9N4no83r0luw",
+    authDomain: "cnc-auto-design.firebaseapp.com",
+    databaseURL: "https://cnc-auto-design-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "cnc-auto-design",
+    storageBucket: "cnc-auto-design.firebasestorage.app",
+    messagingSenderId: "264459711681",
+    appId: "1:264459711681:web:567135f5e2dca023651040",
+    measurementId: "G-VS4TMDVK3S"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // Make Firebase available globally
+  window.firebase = {
+    auth: auth,
+    firestore: db,
+    app: app
+  };
+</script>
 
   <script>
-    // Your web app's Firebase configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyBnv7vkXL4clxbTI4ThSGS9N4no83r0luw",
-      authDomain: "cnc-auto-design.firebaseapp.com",
-      databaseURL: "https://cnc-auto-design-default-rtdb.europe-west1.firebasedatabase.app",
-      projectId: "cnc-auto-design",
-      storageBucket: "cnc-auto-design.firebasestorage.app",
-      messagingSenderId: "264459711681",
-      appId: "1:264459711681:web:567135f5e2dca023651040",
-      measurementId: "G-VS4TMDVK3S"
-    };
-
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const auth = firebase.auth();
-
     // Auto reset localStorage if URL contains ?reset=1
 
     (function(){
