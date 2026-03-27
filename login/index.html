@@ -480,6 +480,21 @@
 
   <footer>
     <div class="container">
+      <!-- New Footer Options -->
+      <div style="margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:20px;text-align:center">
+        <div style="display:flex;justify-content:center;gap:30px;flex-wrap:wrap">
+          <button onclick="openModal('cncAutoDesignModal')" style="color:#93a3b8;text-decoration:none;font-size:14px;transition:color 0.3s;background:none;border:none;cursor:pointer" onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='#93a3b8'">
+            <strong>CNC Auto Design</strong>
+          </button>
+          <button onclick="openModal('founderStoryModal')" style="color:#93a3b8;text-decoration:none;font-size:14px;transition:color 0.3s;background:none;border:none;cursor:pointer" onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='#93a3b8'">
+            <strong>Founder Story</strong>
+          </button>
+          <button onclick="openModal('companyModal')" style="color:#93a3b8;text-decoration:none;font-size:14px;transition:color 0.3s;background:none;border:none;cursor:pointer" onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='#93a3b8'">
+            <strong>Company</strong>
+          </button>
+        </div>
+      </div>
+      
       <div class="footer">
         <div>
           <h4>About</h4>
@@ -518,6 +533,81 @@
       </div>
     </div>
   </footer>
+  
+  <!-- CNC Auto Design Modal -->
+  <div id="cncAutoDesignModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.8)">
+    <div style="position:absolute;top:0;left:0;width:100%;height:60px;background:linear-gradient(90deg,#1e3a8a,#3b82f6);display:flex;align-items:center;padding:0 20px">
+      <img src="cnc_auto_design.png" alt="CNC Auto Design Logo" style="width:40px;height:40px;object-fit:contain;border-radius:4px">
+      <span style="color:white;font-size:18px;font-weight:bold;margin-left:10px">CNC Auto Design</span>
+    </div>
+    <div style="position:absolute;top:60px;left:0;right:0;bottom:0;overflow-y:auto;background:white;padding:40px">
+      <button onclick="closeModal('cncAutoDesignModal')" style="position:absolute;top:20px;right:20px;background:#f3f4f6;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:20px">✕</button>
+      
+      <h2 style="color:#1e3a8a;margin-bottom:20px">About CNC Auto Design Software</h2>
+      <p style="line-height:1.6;color:#374151;font-size:16px">
+        CNC Auto Design Software is an innovative solution designed to simplify CNC design process. The software allows users to easily generate CNC-ready designs from images. By simply uploading a wood carving image and clicking Generate button, system automatically processes the image, creates precise polyline paths, and allows users to export the design as a DXF file that can be used directly in CNC machines.
+      </p>
+      <p style="line-height:1.6;color:#374151;font-size:16px;margin-top:20px">
+        The goal of this software is to reduce manual design work and make CNC design faster, easier, and more accessible for CNC operators and designers.
+      </p>
+    </div>
+  </div>
+
+  <!-- Founder Story Modal -->
+  <div id="founderStoryModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.8)">
+    <div style="position:absolute;top:0;left:0;width:100%;height:60px;background:linear-gradient(90deg,#1e3a8a,#3b82f6);display:flex;align-items:center;padding:0 20px">
+      <img src="cnc_auto_design.png" alt="CNC Auto Design Logo" style="width:40px;height:40px;object-fit:contain;border-radius:4px">
+      <span style="color:white;font-size:18px;font-weight:bold;margin-left:10px">Founder Story</span>
+    </div>
+    <div style="position:absolute;top:60px;left:0;right:0;bottom:0;overflow-y:auto;background:white;padding:40px">
+      <button onclick="closeModal('founderStoryModal')" style="position:absolute;top:20px;right:20px;background:#f3f4f6;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:20px">✕</button>
+      
+      <h2 style="color:#1e3a8a;margin-bottom:20px">Founder Story</h2>
+      <p style="line-height:1.6;color:#374151;font-size:16px">
+        <strong>Md. Maruf Hossain</strong> is Founder, Owner, and Developer of CNC Auto Design Software. He is a professional CNC machine operator, designer, and software developer with practical experience in CNC industry.
+      </p>
+      <p style="line-height:1.6;color:#374151;font-size:16px;margin-top:20px">
+        In 2018, he began thinking about creating a software solution that could automatically generate CNC designs from images. His vision was to help CNC users save time and simplify complex design processes.
+      </p>
+      <p style="line-height:1.6;color:#374151;font-size:16px;margin-top:20px">
+        With strong determination, he started developing system step by step. After years of research, experimentation, and improvement, software gradually took shape. In 2026, software successfully achieved its core functionality — automatically generating polyline designs from images and exporting DXF files that can be directly used in CNC machines.
+      </p>
+      <p style="line-height:1.6;color:#374151;font-size:16px;margin-top:20px">
+        After confirming the effectiveness of the system, he decided to officially release the software to help CNC designers and operators improve their workflow.
+      </p>
+    </div>
+  </div>
+
+  <!-- Company Modal -->
+  <div id="companyModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.8)">
+    <div style="position:absolute;top:0;left:0;width:100%;height:60px;background:linear-gradient(90deg,#1e3a8a,#3b82f6);display:flex;align-items:center;padding:0 20px">
+      <img src="cnc_auto_design.png" alt="CNC Auto Design Logo" style="width:40px;height:40px;object-fit:contain;border-radius:4px">
+      <span style="color:white;font-size:18px;font-weight:bold;margin-left:10px">Company</span>
+    </div>
+    <div style="position:absolute;top:60px;left:0;right:0;bottom:0;overflow-y:auto;background:white;padding:40px">
+      <button onclick="closeModal('companyModal')" style="position:absolute;top:20px;right:20px;background:#f3f4f6;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:20px">✕</button>
+      
+      <h2 style="color:#1e3a8a;margin-bottom:20px">Mission</h2>
+      <p style="line-height:1.6;color:#374151;font-size:16px">
+        The mission of CNC Auto Design Software is to provide a smart and easy solution for CNC users. The software aims to reduce manual work and help users quickly convert images into CNC-ready designs.
+      </p>
+      
+      <h2 style="color:#1e3a8a;margin:30px 0 20px">Vision</h2>
+      <p style="line-height:1.6;color:#374151;font-size:16px">
+        The vision of this project is to develop advanced CNC software tools that support designers, operators, and manufacturers by making CNC technology more efficient and accessible.
+      </p>
+      
+      <h2 style="color:#1e3a8a;margin:30px 0 20px">Company Information</h2>
+      <div style="background:#f8fafc;padding:20px;border-radius:8px;border-left:4px solid #3b82f6">
+        <p style="margin:0 0 10px"><strong>Company Name:</strong> Bangladesh CNC Apps Company Limited</p>
+        <p style="margin:0 0 10px"><strong>Software Name:</strong> CNC Auto Design Software</p>
+        <p style="margin:0 0 10px"><strong>Founder & Developer:</strong> Md. Maruf Hossain</p>
+        <p style="margin:0;color:#6b7280;font-size:14px">
+          Bangladesh CNC Apps Company Limited focuses on developing innovative software solutions for CNC machines and digital design technologies.
+        </p>
+      </div>
+    </div>
+  </div>
   
   <!-- Header-only Google Login Modal -->
   <div id="gModal" style="display:none;position:fixed;inset:0;z-index:50">
@@ -1779,7 +1869,7 @@
             localStorage.setItem('chatMessages', JSON.stringify(messages));
             
             // Also try to send to server directly
-            fetch(`${window.location.origin}/api/chat-messages`, {
+            fetch('https://cnc-auto-design-1.onrender.com/api/chat-messages', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -1876,8 +1966,45 @@
             transform: translateX(0);
           }
         }
+        
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
       `;
       document.head.appendChild(style);
+    });
+    
+    // Modal functions
+    function openModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+      }
+    }
+    
+    function closeModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+      }
+    }
+    
+    // Close modal when clicking outside
+    document.addEventListener('click', function(event) {
+      if (event.target.id === 'cncAutoDesignModal' || 
+          event.target.id === 'founderStoryModal' || 
+          event.target.id === 'companyModal') {
+        closeModal(event.target.id);
+      }
     });
   </script>
 </body>
