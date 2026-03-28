@@ -15,7 +15,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics-compat.js"></script>
   <style>
 
     *{box-sizing:border-box}
@@ -156,37 +159,99 @@
 
   </style>
 
-  <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-  import { getAuth } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-  import { getFirestore } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyBnv7vkXL4clxbTI4ThSGS9N4no83r0luw",
-    authDomain: "cnc-auto-design.firebaseapp.com",
-    databaseURL: "https://cnc-auto-design-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "cnc-auto-design",
-    storageBucket: "cnc-auto-design.firebasestorage.app",
-    messagingSenderId: "264459711681",
-    appId: "1:264459711681:web:567135f5e2dca023651040",
-    measurementId: "G-VS4TMDVK3S"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-
-  // Make Firebase available globally
-  window.firebase = {
-    auth: auth,
-    firestore: db,
-    app: app
-  };
-</script>
-
   <script>
+
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyBnv7vkXL4clxbTI4ThSGS9N4no83r0luw",
+      authDomain: "cnc-auto-design.firebaseapp.com",
+      databaseURL: "https://cnc-auto-design-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "cnc-auto-design",
+      storageBucket: "cnc-auto-design.firebasestorage.app",
+      messagingSenderId: "264459711681",
+      appId: "1:264459711681:web:567135f5e2dca023651040",
+      measurementId: "G-VS4TMDVK3S"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const analytics = firebase.analytics();
+
+    // Firebase Authentication Function
+    async function authenticateWithFirebase(email, password) {
+      try {
+        // Get latest backup from Firestore
+        const querySnapshot = await db.collection('activeUsersBackup')
+          .orderBy('timestamp', 'desc')
+          .limit(1)
+          .get();
+
+        if (!querySnapshot.empty) {
+          const doc = querySnapshot.docs[0];
+          const data = doc.data();
+          
+          if (data && data.users) {
+            // Find user by email or phone
+            const user = data.users.find(u => 
+              u.email === email || u.phone === email
+            );
+            
+            if (user) {
+              // Check if password matches
+              // Note: We need to store password in user data during approval
+              // For now, we'll check if user exists and is active
+              const today = new Date();
+              const expiryDate = new Date(user.expiry);
+              
+              if (expiryDate >= today) {
+                // For security, let's add a basic password check
+                // In production, passwords should be hashed
+                const storedPassword = user.password || user.pw || '';
+                
+                if (password === storedPassword) {
+                  // User found, password matches, and account is active
+                  return {
+                    success: true,
+                    user: {
+                      id: user.id || Date.now().toString(),
+                      email: user.email,
+                      name: user.name,
+                      phone: user.phone,
+                      plan: user.plan,
+                      expiry: user.expiry,
+                      created: user.created
+                    }
+                  };
+                } else {
+                  return {
+                    success: false,
+                    message: 'পাসওয়ার্ড ভুল। আবার চেষ্টা করুন।'
+                  };
+                }
+              } else {
+                return {
+                  success: false,
+                  message: 'আপনার অ্যাকাউন্টের মেয়াদ উত্তীর্ণ হয়েছে।'
+                };
+              }
+            }
+          }
+        }
+        
+        return {
+          success: false,
+          message: 'ইমেইল/ফোন বা পাসওয়ার্ড ভুল। অথবা অ্যাকাউন্টটি এখনও অনুমোদন করা হয়নি।'
+        };
+      } catch (error) {
+        console.error('Firebase authentication error:', error);
+        return {
+          success: false,
+          message: 'সার্ভারে সমস্যা হচ্ছে। আবার চেষ্টা করুন।'
+        };
+      }
+    }
+
     // Auto reset localStorage if URL contains ?reset=1
 
     (function(){
@@ -890,138 +955,140 @@
     }
 
     async function doLogin(){
+
       const emailRaw = document.querySelector('#loginForm input[type="email"]').value||'';
+
       const email = emailRaw.toString().normalize('NFKC').toLowerCase().replace(/[\s\u200B\u200C\u200D\uFEFF]/g,'');
+
       const pw = document.getElementById('password').value||'';
+
       
+
       if(!email || !pw){
+
         alert('অনুগ্রহ করে ইমেইল এবং পাসওয়ার্ড উভয়ই লিখুন');
+
         return;
+
       }
+
       
+
       // Show loading state
+
       const loginBtn = document.querySelector('#loginForm .btn-primary');
+
       const originalText = loginBtn.textContent;
+
       loginBtn.textContent = 'লগইন হচ্ছে...';
+
       loginBtn.disabled = true;
+
       
+
       try {
-        // Try to authenticate against server first
-        const response = await fetch('https://cnc-auto-design-1.onrender.com/api/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email, password: pw })
-        });
+
+        // First try Firebase authentication
+        console.log('Trying Firebase authentication...');
+        const firebaseResult = await authenticateWithFirebase(email, pw);
         
-        // Check if response is JSON (not HTML error page)
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Server not available');
-        }
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          // Save to Firebase
-          await saveUserToFirebase(data.user);
-          
+        if (firebaseResult.success) {
           // Store session
-          localStorage.setItem('userToken', data.user.id);
-          localStorage.setItem('userInfo', JSON.stringify(data.user));
+          localStorage.setItem('userToken', firebaseResult.user.id);
+          localStorage.setItem('userInfo', JSON.stringify(firebaseResult.user));
           
-          // Redirect to main website directly
+          // Redirect to main website
           window.location.href = 'index.html';
-        } else {
-          throw new Error(data.message || 'Login failed');
+          return;
         }
-      } catch (error) {
-        console.error('Login error:', error);
-        
-        // Check if server is not available
-        if (error.message === 'Server not available' || error.name === 'TypeError') {
-          // Fallback to localStorage authentication
-          console.log('Server not available, using fallback authentication');
-          await fallbackAuthentication(email, pw);
-        } else {
-          alert(error.message || 'লগইন ব্যর্থ হয়েছে। আবার চেষ্টা করুন।');
-          
-          // Reset button state
-          loginBtn.textContent = originalText;
-          loginBtn.disabled = false;
-        }
-      }
-    }
-    
-    // Save user data to Firebase
-    async function saveUserToFirebase(user) {
-      try {
-        // Save to users collection
-        await db.collection('users').doc(user.id).set({
-          email: user.email,
-          name: user.name || user.email.split('@')[0],
-          plan: user.plan || 'basic',
-          created: user.created || new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
-          status: 'active'
-        }, { merge: true });
-        
-        // Save login session
-        await db.collection('loginSessions').add({
-          userId: user.id,
-          email: user.email,
-          loginTime: new Date().toISOString(),
-          userAgent: navigator.userAgent,
-          ip: await getClientIP()
+
+        // If Firebase auth fails, try server authentication
+        console.log('Firebase auth failed, trying server...');
+        const response = await fetch('https://cnc-auto-design-1.onrender.com/api/auth/login', {
+
+          method: 'POST',
+
+          headers: {
+
+            'Content-Type': 'application/json',
+
+          },
+
+          body: JSON.stringify({ email, password: pw })
+
         });
+
         
-        console.log('User data saved to Firebase successfully');
-      } catch (error) {
-        console.error('Error saving to Firebase:', error);
-        // Don't block login if Firebase fails
-      }
-    }
-    
-    // Get client IP (simple implementation)
-    async function getClientIP() {
-      try {
-        const response = await fetch('https://api.ipify.org?format=json');
+
+        // Check if response is JSON (not HTML error page)
+
+        const contentType = response.headers.get('content-type');
+
+        if (!contentType || !contentType.includes('application/json')) {
+
+          throw new Error('Server not available');
+
+        }
+
+        
+
         const data = await response.json();
-        return data.ip;
-      } catch (error) {
-        return 'unknown';
-      }
-    }
-    
-    // Load user data from Firebase on page load
-    async function loadUserFromFirebase(userId) {
-      try {
-        const userDoc = await db.collection('users').doc(userId).get();
-        if (userDoc.exists) {
-          const userData = userDoc.data();
-          localStorage.setItem('userInfo', JSON.stringify(userData));
-          return userData;
-        }
-      } catch (error) {
-        console.error('Error loading from Firebase:', error);
-      }
-      return null;
-    }
-    
-    // Check for existing session on page load
-    window.addEventListener('load', async function() {
-      const userToken = localStorage.getItem('userToken');
-      if (userToken) {
-        // Try to load user data from Firebase
-        const userData = await loadUserFromFirebase(userToken);
-        if (userData) {
-          console.log('User data loaded from Firebase');
+
+        
+
+        if (data.success) {
+
+          // Store session
+
+          localStorage.setItem('userToken', data.user.id);
+
+          localStorage.setItem('userInfo', JSON.stringify(data.user));
+
+          
+
+          // Redirect to main website directly
+
+          window.location.href = 'index.html';
+
         } else {
-          console.log('User data not found in Firebase, using localStorage');
+
+          throw new Error(data.message || 'Login failed');
+
         }
+
+      } catch (error) {
+
+        console.error('Login error:', error);
+
+        
+
+        // Check if server is not available
+
+        if (error.message === 'Server not available' || error.name === 'TypeError') {
+
+          // Fallback to localStorage authentication
+
+          console.log('Server not available, using fallback authentication');
+
+          await fallbackAuthentication(email, pw);
+
+        } else {
+
+          alert(error.message || 'লগইন ব্যর্থ হয়েছে। আবার চেষ্টা করুন।');
+
+          
+
+          // Reset button state
+
+          loginBtn.textContent = originalText;
+
+          loginBtn.disabled = false;
+
+        }
+
       }
-    });
+
+    }
 
     
 

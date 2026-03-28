@@ -7,6 +7,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics-compat.js"></script>
   <style>
     body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#0b1220;color:#eef2ff}
     header{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid #1e293b;background:#0f172a;flex-wrap:wrap}
@@ -189,7 +193,7 @@
       <input id="admin-search" type="search" placeholder="Search users by name, email, phone or TRX" autocomplete="off"/>
     </div>
     <div class="auth">
-      <img class="avatar" src="./cnc_auto_design.png" onerror="this.style.display='none'" alt="Profile"/>
+      <img class="avatar" src="../cnc_auto_design.png" onerror="this.style.display='none'" alt="Profile"/>
       <div class="hdr-3d" aria-label="Menu" onclick="openSideMenu()">
         <div class="ring">
           <svg viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -222,7 +226,7 @@
   <div id="sideOverlay" class="side-overlay" onclick="if(event.target.id==='sideOverlay'){closeSideMenu()}">
     <div class="side-panel">
       <div class="side-head">
-        <img src="./cnc_auto_design.png" alt="Logo" style="width:30px;height:30px;border-radius:6px;box-shadow:0 0 0 2px rgba(255,255,255,.18)">
+        <img src="../cnc_auto_design.png" alt="Logo" style="width:30px;height:30px;border-radius:6px;box-shadow:0 0 0 2px rgba(255,255,255,.18)">
         <b>Admin Panel</b>
       </div>
       <div class="side-list">
@@ -231,6 +235,8 @@
         <a href="#" class="side-item" onclick="closeSideMenu(); openPaymentStats()">💳 Payments Summary</a>
         <a href="#" class="side-item" onclick="closeSideMenu(); openInsights()">📊 Insights</a>
         <a href="#" class="side-item" onclick="closeSideMenu(); openSettings()">⚙️ Settings</a>
+        <a href="#" class="side-item" onclick="closeSideMenu(); backupActiveUsersToFirebase()">☁️ Backup to Firebase</a>
+        <a href="#" class="side-item" onclick="closeSideMenu(); restoreActiveUsersFromFirebase()">📥 Restore from Firebase</a>
         <a href="#" class="side-item" onclick="closeSideMenu(); openLiveChat()">💬 Live Chat</a>
       </div>
       <div class="side-foot">
@@ -321,6 +327,110 @@
     </div>
   </main>
   <script>
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyBnv7vkXL4clxbTI4ThSGS9N4no83r0luw",
+      authDomain: "cnc-auto-design.firebaseapp.com",
+      databaseURL: "https://cnc-auto-design-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "cnc-auto-design",
+      storageBucket: "cnc-auto-design.firebasestorage.app",
+      messagingSenderId: "264459711681",
+      appId: "1:264459711681:web:567135f5e2dca023651040",
+      measurementId: "G-VS4TMDVK3S"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const analytics = firebase.analytics();
+
+    // Firebase Active Users Backup Functions (Using Firestore)
+    function backupActiveUsersToFirebase() {
+      getActive().then(activeList => {
+        if (activeList && activeList.length > 0) {
+          // Upload to Firebase Firestore
+          db.collection('activeUsersBackup').add({
+            timestamp: new Date().toISOString(),
+            users: activeList
+          })
+          .then((docRef) => {
+            console.log('Active users successfully backed up to Firebase with ID:', docRef.id);
+            showFirebaseStatus('✅ Backup completed', 'success');
+          })
+          .catch(error => {
+            console.error('Firebase backup error:', error);
+            showFirebaseStatus('❌ Backup failed', 'error');
+          });
+        }
+      });
+    }
+
+    function restoreActiveUsersFromFirebase() {
+      db.collection('activeUsersBackup')
+        .orderBy('timestamp', 'desc')
+        .limit(1)
+        .get()
+      .then(querySnapshot => {
+        if (!querySnapshot.empty) {
+          const doc = querySnapshot.docs[0];
+          const data = doc.data();
+          if (data && data.users) {
+            console.log('Firebase backup data found:', data.users.length, 'users');
+            showFirebaseStatus(`📥 Found ${data.users.length} users in backup`, 'info');
+            return data.users;
+          }
+        }
+        console.log('No Firebase backup data found');
+        showFirebaseStatus('📭 No backup data found', 'warning');
+        return null;
+      })
+      .catch(error => {
+        console.error('Firebase restore error:', error);
+        showFirebaseStatus('❌ Restore failed', 'error');
+        return null;
+      });
+    }
+
+    function showFirebaseStatus(message, type) {
+      // Create status notification
+      const status = document.createElement('div');
+      status.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 600;
+        font-size: 14px;
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      `;
+      
+      // Set color based on type
+      const colors = {
+        success: '#22c55e',
+        error: '#ef4444',
+        warning: '#f59e0b',
+        info: '#3b82f6'
+      };
+      status.style.background = colors[type] || colors.info;
+      status.textContent = message;
+      
+      document.body.appendChild(status);
+      
+      // Show notification
+      setTimeout(() => status.style.opacity = '1', 100);
+      
+      // Hide after 3 seconds
+      setTimeout(() => {
+        status.style.opacity = '0';
+        setTimeout(() => document.body.removeChild(status), 300);
+      }, 3000);
+    }
+
     const ADMIN_EMAILS = ['your-admin@gmail.com','mdmarufcon84@gmail.com'];
     (function(){
       const norm = (s)=> (s||'').toString().normalize('NFKC').toLowerCase().replace(/[\s\u200B\u200C\u200D\uFEFF]/g,'');
@@ -1018,6 +1128,7 @@
                   email: r.email||'',
                   phone: r.phone||'',
                   trx: r.trx||'',
+                  password: r.password||'', // Add password field
                   plan: r.plan||'',
                   method: r.method||'',
                   created: r.created || new Date().toISOString(),
@@ -1038,6 +1149,12 @@
                   if(data.success) {
                     console.log('User added to active list successfully');
                     renderRequests();
+                    
+                    // Auto backup to Firebase after successful approval
+                    setTimeout(() => {
+                      backupActiveUsersToFirebase();
+                    }, 1000);
+                    
                     // Notify local desktop app (if running) to auto-login
                     try{
                       const plan = (approved.plan||'').toLowerCase();
@@ -1278,24 +1395,16 @@
     }
     
     function saveUserDetails(){
+      const email = document.getElementById('d-email').value;
+      const name = document.getElementById('d-name').value;
+      const phone = document.getElementById('d-phone').value;
+      const trx = document.getElementById('d-trx').value;
+      const plan = document.getElementById('d-plan').value;
+      const method = document.getElementById('d-method').value;
+      const created = document.getElementById('d-created').value;
+      const expiry = document.getElementById('d-expiry').value;
+      
       try{
-        // Get all form values
-        const name = document.getElementById('d-name').value;
-        const email = document.getElementById('d-email').value;
-        const phone = document.getElementById('d-phone').value;
-        const trx = document.getElementById('d-trx').value;
-        const plan = document.getElementById('d-plan').value;
-        const method = document.getElementById('d-method').value;
-        const created = document.getElementById('d-created').value;
-        const expiry = document.getElementById('d-expiry').value;
-        
-        // Validate required fields
-        if(!name || !email){
-          alert('Name and Email are required!');
-          return;
-        }
-        
-        // Get current active users
         getActive().then(activeList => {
           const user = activeList.find(u => u.email === email);
           
@@ -1329,6 +1438,11 @@
                 if(document.getElementById('activeListOverlay').style.display === 'grid'){
                   openActiveList();
                 }
+                
+                // Auto backup to Firebase after successful update
+                setTimeout(() => {
+                  backupActiveUsersToFirebase();
+                }, 1000);
                 
                 alert('User details saved successfully!');
                 closeDetails();
