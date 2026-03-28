@@ -193,7 +193,7 @@
       <input id="admin-search" type="search" placeholder="Search users by name, email, phone or TRX" autocomplete="off"/>
     </div>
     <div class="auth">
-      <img class="avatar" src="../cnc_auto_design.png" onerror="this.style.display='none'" alt="Profile"/>
+      <img class="avatar" src="./cnc_auto_design.png" onerror="this.style.display='none'" alt="Profile"/>
       <div class="hdr-3d" aria-label="Menu" onclick="openSideMenu()">
         <div class="ring">
           <svg viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -226,12 +226,13 @@
   <div id="sideOverlay" class="side-overlay" onclick="if(event.target.id==='sideOverlay'){closeSideMenu()}">
     <div class="side-panel">
       <div class="side-head">
-        <img src="../cnc_auto_design.png" alt="Logo" style="width:30px;height:30px;border-radius:6px;box-shadow:0 0 0 2px rgba(255,255,255,.18)">
+        <img src="./cnc_auto_design.png" alt="Logo" style="width:30px;height:30px;border-radius:6px;box-shadow:0 0 0 2px rgba(255,255,255,.18)">
         <b>Admin Panel</b>
       </div>
       <div class="side-list">
         <a href="#" class="side-item" onclick="closeSideMenu(); goHome()">🏠 Home</a>
         <a href="#" class="side-item" onclick="closeSideMenu(); openActiveList()">👥 Active Users <span id="badge-active" class="badge">0</span></a>
+        <a href="#" class="side-item" onclick="closeSideMenu(); syncFromFirebase()">🔄 Sync from Firebase</a>
         <a href="#" class="side-item" onclick="closeSideMenu(); openPaymentStats()">💳 Payments Summary</a>
         <a href="#" class="side-item" onclick="closeSideMenu(); openInsights()">📊 Insights</a>
         <a href="#" class="side-item" onclick="closeSideMenu(); openSettings()">⚙️ Settings</a>
@@ -391,6 +392,40 @@
       });
     }
 
+    function syncFromFirebase() {
+      showFirebaseStatus('🔄 Syncing from Firebase...', 'info');
+      
+      db.collection('activeUsersBackup')
+        .orderBy('timestamp', 'desc')
+        .limit(1)
+        .get()
+      .then(querySnapshot => {
+        if (!querySnapshot.empty) {
+          const doc = querySnapshot.docs[0];
+          const data = doc.data();
+          
+          if (data && data.users) {
+            // Update localStorage with Firebase data
+            localStorage.setItem('activeUsers', JSON.stringify(data.users));
+            
+            // Refresh the active users view
+            openActiveList();
+            
+            console.log('Synced from Firebase:', data.users.length, 'users');
+            showFirebaseStatus(`✅ Synced ${data.users.length} users from Firebase`, 'success');
+          } else {
+            showFirebaseStatus('📭 No users found in Firebase', 'warning');
+          }
+        } else {
+          showFirebaseStatus('📭 No data found in Firebase', 'warning');
+        }
+      })
+      .catch(error => {
+        console.error('Firebase sync error:', error);
+        showFirebaseStatus('❌ Sync failed', 'error');
+      });
+    }
+
     function showFirebaseStatus(message, type) {
       // Create status notification
       const status = document.createElement('div');
@@ -466,7 +501,7 @@
     }
     
     function getActive(){
-      // Try to get from server first, fallback to localStorage
+      // Try to get from server first, fallback to Firebase then localStorage
       return fetch('https://cnc-auto-design-1.onrender.com/api/active-users')
         .then(response => response.json())
         .then(data => {
@@ -475,8 +510,31 @@
         })
         .catch(error => {
           console.error('Failed to load active users from server:', error);
-          // Fallback to localStorage
-          try{ return JSON.parse(localStorage.getItem('activeUsers')||'[]'); }catch(e){ return []; }
+          
+          // Fallback to Firebase
+          console.log('Trying Firebase as fallback...');
+          return db.collection('activeUsersBackup')
+            .orderBy('timestamp', 'desc')
+            .limit(1)
+            .get()
+            .then(querySnapshot => {
+              if (!querySnapshot.empty) {
+                const doc = querySnapshot.docs[0];
+                const data = doc.data();
+                if (data && data.users) {
+                  console.log('Active users loaded from Firebase:', data.users.length, 'users');
+                  return data.users;
+                }
+              }
+              console.log('No data in Firebase, using localStorage fallback');
+              // Final fallback to localStorage
+              try{ return JSON.parse(localStorage.getItem('activeUsers')||'[]'); }catch(e){ return []; }
+            })
+            .catch(firebaseError => {
+              console.error('Firebase fallback failed:', firebaseError);
+              // Final fallback to localStorage
+              try{ return JSON.parse(localStorage.getItem('activeUsers')||'[]'); }catch(e){ return []; }
+            });
         });
     }
     
@@ -1128,7 +1186,7 @@
                   email: r.email||'',
                   phone: r.phone||'',
                   trx: r.trx||'',
-                  password: r.password||'', // Add password field
+                  password: r.password||'', // Add password field for Firebase authentication
                   plan: r.plan||'',
                   method: r.method||'',
                   created: r.created || new Date().toISOString(),
@@ -1152,7 +1210,31 @@
                     
                     // Auto backup to Firebase after successful approval
                     setTimeout(() => {
-                      backupActiveUsersToFirebase();
+                      // Get current active users and add the new approved user with password
+                      getActive().then(activeList => {
+                        // Ensure the approved user includes password
+                        const approvedUserWithPassword = {
+                          ...approved,
+                          password: r.password || '' // Make sure password is included
+                        };
+                        
+                        // Add to active list for Firebase backup
+                        const updatedActiveList = [...activeList, approvedUserWithPassword];
+                        
+                        // Upload to Firebase Firestore
+                        db.collection('activeUsersBackup').add({
+                          timestamp: new Date().toISOString(),
+                          users: updatedActiveList
+                        })
+                        .then((docRef) => {
+                          console.log('Active users successfully backed up to Firebase with ID:', docRef.id);
+                          showFirebaseStatus('✅ Backup completed', 'success');
+                        })
+                        .catch(error => {
+                          console.error('Firebase backup error:', error);
+                          showFirebaseStatus('❌ Backup failed', 'error');
+                        });
+                      });
                     }, 1000);
                     
                     // Notify local desktop app (if running) to auto-login

@@ -1672,7 +1672,9 @@
 
         const phone = (document.getElementById('su-phone')||{}).value||'';
 
-        const req = {name, email, phone, trx: (document.getElementById('trx-id')||{}).value||'', plan, method, created: new Date().toISOString()};
+        const password = (document.getElementById('pw1')||{}).value||'';
+
+        const req = {name, email, phone, password, trx: (document.getElementById('trx-id')||{}).value||'', plan, method, created: new Date().toISOString()};
 
         
 
