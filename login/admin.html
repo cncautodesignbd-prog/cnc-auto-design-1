@@ -1467,70 +1467,120 @@
       const created = document.getElementById('d-created').value;
       const expiry = document.getElementById('d-expiry').value;
       
-      try{
-        getActive().then(activeList => {
-          const user = activeList.find(u => u.email === email);
-          
-          if(user){
-            // Update user on server
-            fetch(`https://cnc-auto-design-1.onrender.com/api/active-users/${user.id}`, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                name,
-                phone,
-                trx: user.trx, // Keep original trx for guest accounts
-                plan: user.plan === 'guest_trial' ? 'guest_trial' : plan, // Keep guest_trial for guest accounts
-                method: user.method === 'guest_access' ? 'guest_access' : method, // Keep guest_access for guest accounts
-                created,
-                expiry,
-                amount: user.amount || 0
-              })
-            })
-            .then(response => response.json())
-            .then(data => {
-              if(data.success) {
-                console.log('User details updated successfully');
-                
-                // Update current editing user
-                currentEditingUser = { ...user, name, phone, trx, plan, method, created, expiry };
-                
-                // Refresh the active list if open
-                if(document.getElementById('activeListOverlay').style.display === 'grid'){
-                  openActiveList();
-                }
-                
-                // Auto backup to Firebase after successful update
-                setTimeout(() => {
-                  backupActiveUsersToFirebase();
-                }, 1000);
-                
-                alert('User details saved successfully!');
-                closeDetails();
-              } else {
-                console.error('Failed to save user details:', data.message);
-                alert('Failed to save user details!');
-              }
-            })
-            .catch(error => {
-              console.error('Error saving user details:', error);
-              alert('Failed to save user details!');
-            });
-          } else {
-            alert('User not found in active list!');
-          }
-        });
-      }catch(e){
-        console.error('Error saving user details:', e);
-        alert('Failed to save user details!');
+      // Convert date strings to ISO format for server
+      const createdISO = created ? new Date(created).toISOString() : '';
+      const expiryISO = expiry ? new Date(expiry).toISOString() : '';
+      
+      if(!email || !name){
+        alert('Name and Email are required!');
+        return;
       }
+      
+      getActive().then(activeList => {
+        const user = activeList.find(u => u.email === email);
+        
+        if(user){
+          // Update user on server
+              fetch(`https://cnc-auto-design-1.onrender.com/api/active-users/${user.id}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  name,
+                  phone,
+                  trx,
+                  plan,
+                  method,
+                  created: createdISO,
+                  expiry: expiryISO
+                })
+              })
+          .then(response => response.json())
+          .then(data => {
+            if(data.success) {
+              console.log('User details updated successfully');
+              
+              // Update current editing user
+              currentEditingUser = { ...user, name, phone, trx, plan, method, created: createdISO, expiry: expiryISO };
+              
+              // Refresh the active list if open
+              const activeListOverlay = document.getElementById('activeListOverlay');
+              if(activeListOverlay.style.display === 'grid') {
+                openActiveList();
+              }
+              
+              // Also update online sync server
+              fetch('http://localhost:5002/api/user/update', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  email,
+                  name,
+                  phone,
+                  trx,
+                  plan,
+                  method,
+                  created: createdISO,
+                  expiry: expiryISO
+                })
+              }).then(response => response.json())
+              .then(data => {
+                if(data.success) {
+                  console.log('Online sync server updated successfully');
+                } else {
+                  console.log('Online sync server update failed:', data.message);
+                }
+              }).catch(err => console.log('Online sync server not available:', err));
+              
+              // Also update real-time sync server
+              fetch('http://localhost:5001/api/user/update', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  email,
+                  name,
+                  phone,
+                  trx,
+                  plan,
+                  method,
+                  created: createdISO,
+                  expiry: expiryISO
+                })
+              }).catch(err => console.log('Real-time sync server not available:', err));
+              
+              // Also refresh the main request list
+              loadRequests();
+              
+              alert('User details saved successfully! Changes will reflect in desktop app within 30 seconds.');
+              closeDetails();
+            } else {
+              console.error('Failed to save user details:', data.message);
+              alert('Failed to save user details!');
+            }
+          })
+          .catch(error => {
+            console.error('Error saving user details:', error);
+            alert('Failed to save user details!');
+          });
+        } else {
+          alert('User not found in active list!');
+        }
+      });
     }
     
     function openLiveChat() {
       // Open admin live chat interface
       window.open('admin-live-chat.html', '_blank');
+    }
+    
+    function loadRequests() {
+      // Refresh the main request list
+      renderRequests();
     }
   </script>
 </body>
