@@ -1210,31 +1210,12 @@
                     
                     // Auto backup to Firebase after successful approval
                     setTimeout(() => {
-                      // Get current active users and add the new approved user with password
-                      getActive().then(activeList => {
-                        // Ensure the approved user includes password
-                        const approvedUserWithPassword = {
-                          ...approved,
-                          password: r.password || '' // Make sure password is included
-                        };
-                        
-                        // Add to active list for Firebase backup
-                        const updatedActiveList = [...activeList, approvedUserWithPassword];
-                        
-                        // Upload to Firebase Firestore
-                        db.collection('activeUsersBackup').add({
-                          timestamp: new Date().toISOString(),
-                          users: updatedActiveList
-                        })
-                        .then((docRef) => {
-                          console.log('Active users successfully backed up to Firebase with ID:', docRef.id);
-                          showFirebaseStatus('✅ Backup completed', 'success');
-                        })
-                        .catch(error => {
-                          console.error('Firebase backup error:', error);
-                          showFirebaseStatus('❌ Backup failed', 'error');
-                        });
-                      });
+                      backupActiveUsersToFirebase();
+                      
+                      // Refresh active users list
+                      setTimeout(() => {
+                        openActiveList();
+                      }, 500);
                     }, 1000);
                     
                     // Notify local desktop app (if running) to auto-login

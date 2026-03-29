@@ -252,7 +252,55 @@
       }
     }
 
-    // Auto reset localStorage if URL contains ?reset=1
+    // Check if this is opened from desktop app
+    (function(){
+      const urlParams = new URLSearchParams(window.location.search);
+      const isFromDesktop = urlParams.get('desktop') === '1';
+      
+      if (isFromDesktop) {
+        console.log('🖥️ Login page opened from desktop app');
+        
+        // Add a visual indicator that this is for desktop app login
+        const desktopIndicator = document.createElement('div');
+        desktopIndicator.style.cssText = `
+          position: fixed;
+          top: 10px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: linear-gradient(135deg, #3b47d9, #5b6bff);
+          color: white;
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 600;
+          z-index: 1000;
+          box-shadow: 0 4px 12px rgba(59, 71, 217, 0.3);
+          animation: pulse 2s infinite;
+        `;
+        desktopIndicator.innerHTML = '🖥️ Desktop App Login Mode';
+        document.body.appendChild(desktopIndicator);
+        
+        // Add pulse animation
+        const style = document.createElement('style');
+        style.textContent = `
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+          }
+        `;
+        document.head.appendChild(style);
+        
+        // Store desktop mode flag
+        localStorage.setItem('desktopLoginMode', 'true');
+        
+        // Remove indicator after 10 seconds
+        setTimeout(() => {
+          if (desktopIndicator.parentNode) {
+            desktopIndicator.parentNode.removeChild(desktopIndicator);
+          }
+        }, 10000);
+      }
+    })();
 
     (function(){
 
@@ -273,6 +321,81 @@
     })();
 
     function go(url){ window.location.href=url }
+
+    // Function to show login success message
+    function showLoginSuccessMessage() {
+      // Create a success notification
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+        z-index: 10000;
+        font-family: Inter, system-ui, sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        max-width: 350px;
+        animation: slideIn 0.3s ease-out;
+      `;
+      
+      notification.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 24px; height: 24px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+              <path d="M20 6L9 17l-5-5"/>
+            </svg>
+          </div>
+          <div>
+            <div style="font-weight: 700; margin-bottom: 2px;">✅ সফটওয়্যারে লগইন সফল!</div>
+            <div style="font-size: 12px; opacity: 0.9;">Desktop app-এ স্বয়ংক্রিয়ভাবে লগইন হয়েছে</div>
+            <div style="font-size: 11px; opacity: 0.7; margin-top: 2px;">এখন সফটওয়্যারে ফিরে যান</div>
+            <div style="font-size: 11px; opacity: 0.8; margin-top: 4px; padding: 4px 8px; background: rgba(255,255,255,0.2); border-radius: 6px;">
+              💡 ইউজার: <span id="logged-in-username">...</span>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Add animation
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+          from { transform: translateX(0); opacity: 1; }
+          to { transform: translateX(100%); opacity: 0; }
+        }
+      `;
+      document.head.appendChild(style);
+      
+      document.body.appendChild(notification);
+      
+      // Update username in the notification
+      const usernameElement = document.getElementById('logged-in-username');
+      if (usernameElement) {
+        // Try to get username from localStorage or current user data
+        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+        const username = userInfo.name || userInfo.email || 'Unknown';
+        usernameElement.textContent = username;
+      }
+      
+      // Remove notification after 5 seconds
+      setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-in forwards';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+        }, 300);
+      }, 5000);
+    }
 
     function showLogin(){
 
@@ -879,11 +1002,181 @@
     }
 
     function showPayment(){
-
       document.getElementById('signupForm').classList.add('hidden');
-
       document.getElementById('paymentForm').classList.remove('hidden');
+      
+      // Reset payment selection state for desktop mode
+      selectedPlan = '';
+      selectedMethod = '';
+      updatePayCta();
+      
+      console.log('Payment form shown, desktop mode detected');
+      
+      // Special handling for desktop login mode
+      const isDesktopMode = localStorage.getItem('desktopLoginMode') === 'true';
+      if (isDesktopMode) {
+        console.log('Re-initializing payment form for desktop mode');
+        
+        // Re-initialize event listeners after a short delay
+        setTimeout(() => {
+          const planElements = document.querySelectorAll('.plan');
+          const methodElements = document.querySelectorAll('.method');
+          
+          console.log('Re-binding plan elements:', planElements.length);
+          console.log('Re-binding method elements:', methodElements.length);
+          
+          // Re-bind click handlers for desktop mode
+          planElements.forEach(el => {
+            el.onclick = function() {
+              const planType = this.id.replace('plan-', '');
+              console.log('Plan clicked (desktop):', planType);
+              selectPlan(planType);
+            };
+          });
+          
+          methodElements.forEach(el => {
+            el.onclick = function() {
+              const methodType = this.id.replace('method-', '');
+              console.log('Method clicked (desktop):', methodType);
+              selectMethod(methodType);
+            };
+          });
+          
+          // Force update the payment button
+          updatePayCta();
+        }, 100);
+      }
+    }
 
+    // Function to notify desktop application about login
+    async function notifyDesktopLogin(user) {
+      try {
+        // Store login data in localStorage for desktop app to pick up
+        const loginData = {
+          timestamp: Date.now(),
+          user: user,
+          status: 'login_success'
+        };
+        
+        // Use a special key that desktop app will check
+        localStorage.setItem('cnc_desktop_login_sync', JSON.stringify(loginData));
+        
+        // Also set a flag for immediate detection
+        localStorage.setItem('cnc_login_flag', 'true');
+        
+        console.log('Login data stored for desktop sync:', loginData);
+        
+        // Method 1: Direct server communication (no file download)
+        try {
+          const desktopLoginData = {
+            email: user.email,
+            user_data: {
+              plan: user.plan || '6m',
+              expiry: user.expiry || 0,
+              name: user.name || user.email
+            }
+          };
+          
+          // Try multiple ports to find desktop app
+          const ports = [51234, 51235, 51236, 51237, 51238];
+          let loginSent = false;
+          
+          for (const port of ports) {
+            try {
+              const response = await fetch(`http://127.0.0.1:${port}/web-login`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(desktopLoginData),
+                signal: AbortSignal.timeout(2000)
+              });
+              
+              if (response.ok) {
+                console.log(`✅ Login data sent to desktop app on port ${port}`);
+                loginSent = true;
+                break;
+              }
+            } catch (error) {
+              console.log(`Port ${port} failed:`, error.message);
+            }
+          }
+          
+          if (loginSent) {
+            showLoginSuccessMessage();
+          } else {
+            console.log('❌ Desktop app not found');
+          }
+          
+        } catch (error) {
+          console.log('Desktop login failed:', error.message);
+        }
+        
+        // Method 2: Send login data to desktop app via local server (primary method)
+        try {
+          const desktopLoginData = {
+            email: user.email,
+            user_data: {
+              plan: user.plan || '6m',
+              expiry: user.expiry || 0,
+              name: user.name || user.email
+            }
+          };
+          
+          // Try multiple ports to find desktop app
+          const ports = [51234, 51235, 51236, 51237, 51238];
+          let loginSent = false;
+          
+          for (const port of ports) {
+            try {
+              const response = await fetch(`http://127.0.0.1:${port}/web-login`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(desktopLoginData),
+                signal: AbortSignal.timeout(2000)
+              });
+              
+              if (response.ok) {
+                console.log(`✅ Login data sent to desktop app on port ${port}`);
+                showLoginSuccessMessage();
+                loginSent = true;
+                break;
+              }
+            } catch (error) {
+              console.log(`Port ${port} failed:`, error.message);
+            }
+          }
+          
+          if (!loginSent) {
+            console.log('❌ Desktop app not found on any port');
+          }
+          
+        } catch (desktopError) {
+          console.log('Desktop login method failed:', desktopError.message);
+        }
+        
+        // Method 7: Try to use a custom protocol handler
+        try {
+          const protocolUrl = `cnc-desktop://login?data=${encodeURIComponent(JSON.stringify(loginData))}`;
+          const iframe = document.createElement('iframe');
+          iframe.style.display = 'none';
+          iframe.src = protocolUrl;
+          document.body.appendChild(iframe);
+          
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+          }, 1000);
+          
+          console.log('Login notification sent via custom protocol');
+        } catch (protocolError) {
+          console.log('Custom protocol failed:', protocolError.message);
+        }
+        
+      } catch (error) {
+        console.error('Failed to notify desktop app:', error);
+      }
     }
 
     // Persist a basic local account so the desktop app can recognize login later
@@ -997,8 +1290,33 @@
           localStorage.setItem('userToken', firebaseResult.user.id);
           localStorage.setItem('userInfo', JSON.stringify(firebaseResult.user));
           
-          // Redirect to main website
-          window.location.href = 'index.html';
+          // Notify desktop application about login
+          notifyDesktopLogin(firebaseResult.user);
+          
+          // Wait a moment for desktop sync to complete
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Check if this is desktop login mode
+          const isDesktopMode = localStorage.getItem('desktopLoginMode') === 'true';
+          
+          if (isDesktopMode) {
+            // Show success message and offer to close tab
+            showLoginSuccessMessage();
+            
+            // Ask user if they want to close tab
+            setTimeout(() => {
+              if (confirm('✅ সফটওয়্যারে সফলভাবে লগইন হয়েছে!\n\nএই ট্যাবটি বন্ধ করতে চান?')) {
+                window.close();
+              } else {
+                // If user doesn't close, redirect to main website
+                window.location.href = 'index.html';
+              }
+            }, 2000);
+          } else {
+            // Normal redirect for web login
+            window.location.href = 'index.html';
+          }
+          
           return;
         }
 
@@ -1046,9 +1364,59 @@
 
           
 
-          // Redirect to main website directly
+          // Notify desktop application about login
 
-          window.location.href = 'index.html';
+          notifyDesktopLogin(data.user);
+
+          
+
+          // Wait a moment for desktop sync to complete
+
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          
+
+          // Check if this is desktop login mode
+
+          const isDesktopMode = localStorage.getItem('desktopLoginMode') === 'true';
+
+          
+
+          if (isDesktopMode) {
+
+            // Show success message and offer to close tab
+
+            showLoginSuccessMessage();
+
+            
+
+            // Ask user if they want to close the tab
+
+            setTimeout(() => {
+
+              if (confirm('✅ সফটওয়্যারে সফলভাবে লগইন হয়েছে!\n\nএই ট্যাবটি বন্ধ করতে চান?')) {
+
+                window.close();
+
+              } else {
+
+                // If user doesn't close, redirect to main website
+
+                window.location.href = 'index.html';
+
+              }
+
+            }, 2000);
+
+          } else {
+
+            // Normal redirect for web login
+
+            window.location.href = 'index.html';
+
+          }
+
+          
 
         } else {
 
@@ -1144,6 +1512,12 @@
 
         
 
+        // Notify desktop application about login
+
+        notifyDesktopLogin(user);
+
+        
+
         // Redirect to main website directly
 
         window.location.href = 'index.html';
@@ -1170,11 +1544,48 @@
 
         
 
-    // Payment selection state
-
+    // Payment selection state - Initialize immediately
     let selectedPlan = '';
-
     let selectedMethod = '';
+
+    // Initialize payment form when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+      // Ensure payment form elements exist
+      if (document.getElementById('paymentForm')) {
+        console.log('Payment form found on DOM load');
+        updatePayCta();
+      }
+      
+      // Special handling for desktop login mode
+      const isDesktopMode = localStorage.getItem('desktopLoginMode') === 'true';
+      if (isDesktopMode) {
+        console.log('Desktop login mode detected, initializing payment form');
+        
+        // Add event listeners for payment elements
+        setTimeout(() => {
+          const planElements = document.querySelectorAll('.plan');
+          const methodElements = document.querySelectorAll('.method');
+          
+          console.log('Found plan elements:', planElements.length);
+          console.log('Found method elements:', methodElements.length);
+          
+          // Ensure click handlers work in desktop mode
+          planElements.forEach(el => {
+            el.addEventListener('click', function() {
+              const planType = this.id.replace('plan-', '');
+              selectPlan(planType);
+            });
+          });
+          
+          methodElements.forEach(el => {
+            el.addEventListener('click', function() {
+              const methodType = this.id.replace('method-', '');
+              selectMethod(methodType);
+            });
+          });
+        }, 500);
+      }
+    });
 
     const accountNumbers = {
 
@@ -1189,35 +1600,46 @@
     };
 
     function selectPlan(key){
-
+      console.log('Plan selected:', key);
       selectedPlan = key;
-
       document.querySelectorAll('#paymentForm .plan').forEach(el=>el.classList.remove('selected'));
-
-      const el = document.getElementById('plan-'+key); if(el) el.classList.add('selected');
-
+      const el = document.getElementById('plan-'+key); 
+      if(el) {
+        el.classList.add('selected');
+        console.log('Plan element found and selected');
+      } else {
+        console.log('Plan element not found:', 'plan-'+key);
+      }
       updatePayCta();
-
     }
 
     function selectMethod(key){
-
+      console.log('Payment method selected:', key);
       selectedMethod = key;
-
       document.querySelectorAll('#paymentForm .method').forEach(el=>el.classList.remove('selected'));
-
-      const el = document.getElementById('method-'+key); if(el) el.classList.add('selected');
-
+      const el = document.getElementById('method-'+key); 
+      if(el) {
+        el.classList.add('selected');
+        console.log('Method element found and selected');
+      } else {
+        console.log('Method element not found:', 'method-'+key);
+      }
       updatePayCta();
-
     }
 
     function updatePayCta(){
-
       const btn = document.getElementById('pay-cta');
-
-      if(btn) btn.disabled = !(selectedPlan && selectedMethod);
-
+      if(btn) {
+        const shouldEnable = selectedPlan && selectedMethod;
+        btn.disabled = !shouldEnable;
+        console.log('Payment button state updated:', {
+          selectedPlan,
+          selectedMethod,
+          buttonEnabled: shouldEnable
+        });
+      } else {
+        console.log('Payment button not found');
+      }
     }
 
     function showPayDetails(){
@@ -1239,7 +1661,13 @@
       
 
       // For manual payment methods (Nagad, bKash), show existing flow
-
+      
+      if(!document.getElementById('paymentForm') || !document.getElementById('payDetails')) {
+        console.error('Payment form elements not found');
+        alert('পেমেন্ট ফর্ম লোড করতে সমস্যা হয়েছে। পেজ রিফ্রেশ করুন।');
+        return;
+      }
+      
       document.getElementById('paymentForm').classList.add('hidden');
 
       const details = document.getElementById('payDetails');
@@ -1648,126 +2076,71 @@
 
     }
 
+    // Show success message after successful payment
     function showSuccess(){
+      const vMethod = document.getElementById('pd-method').textContent;
+      const vPlan = (selectedPlan==='premium'?'Premium Plan':'Basic Plan');
+      const vTrx = (document.getElementById('trx-id')||{}).value || '';
 
-      const plan = (selectedPlan==='premium' ? 'premium' : 'basic');
+      // Create success modal
+      const successOverlay = document.createElement('div');
+      successOverlay.className = 'center';
+      successOverlay.style.position = 'fixed';
+      successOverlay.style.inset = '0';
+      successOverlay.style.zIndex = '9999';
+      successOverlay.style.background = 'rgba(0,0,0,0.9)';
 
-      const method = (selectedMethod||'');
+      successOverlay.innerHTML = `
+        <div class="success-wrap">
+          <div class="success-card">
+            <h2 style="color: #10b981; margin-bottom: 16px; font-size: 24px;">✅ পেমেন্ট সফল!</h2>
+            <p style="color: #e5e7eb; margin-bottom: 20px;">আপনার রিকোয়েস্ট গ্রহণ করা হটেছে</p>
 
-      const trx = encodeURIComponent((document.getElementById('trx-id')||{}).value || '');
+            <div class="success-list">
+              <div><strong>প্যাকেজ:</strong> ${vPlan}</div>
+              <div><strong>মেথড:</strong> ${vMethod}</div>
+              <div><strong>ট্রানজেকশন:</strong> ${vTrx}</div>
+            </div>
 
-      // Queue request for admin panel (localStorage)
+            <div style="background: #0f172a; border: 1px solid #1e293b; border-radius: 8px; padding: 16px; margin: 16px 0; color: #fbbf24;">
+              <h3 style="margin-bottom: 8px; color: #f59e0b;">📋 অ্যাডমিন প্যানেল</h3>
+              <p style="margin-bottom: 8px;">আপনার অনুরোদন করা হটেছে। অ্যাডমিন প্যানেল থেকে <strong>24-48 ঘন্টার</strong> এর মধ্যে অনুমোদন করা হবে।</p>
+              <p style="margin-bottom: 12px;"><strong>পরবর্তক্করণ:</strong> অ্যাডমিন অনুমোদন হলে গেলে <strong>সফটওয়্যার লগইন করুন</strong> এবং আপনার অ্যাকাউন্ট <strong>স্বয়ংক্রিয়ভাবে লগইন হয়ে যাবে</strong>।</p>
+              <p style="margin-bottom: 8px;">ধন্যবব অসুবিধিত হলে অ্যাডমিন প্যানেল থেকে যোগায় করতে পারে।</p>
+            </div>
 
-      try{
+            <div class="actions-row">
+              <button class="btn btn-primary btn-wide" onclick="this.closest('.dialog').removeChild(this.closest('.dialog')); showMenu();">OK</button>
+            </div>
+          </div>
+        </div>
+      `;
 
-        const fn = (document.getElementById('su-first')||{}).value||'';
+      document.body.appendChild(successOverlay);
 
-        const ln = (document.getElementById('su-last')||{}).value||'';
-
-        const name = (fn+' '+ln).trim() || (document.getElementById('su-user')||{}).value || 'Unknown';
-
-        const emailRaw = (document.getElementById('su-email')||{}).value||'';
-
-        const email = emailRaw.toString().normalize('NFKC').toLowerCase().replace(/[\s\u200B\u200C\u200D\uFEFF]/g,'');
-
-        const phone = (document.getElementById('su-phone')||{}).value||'';
-
-        const password = (document.getElementById('pw1')||{}).value||'';
-
-        const req = {name, email, phone, password, trx: (document.getElementById('trx-id')||{}).value||'', plan, method, created: new Date().toISOString()};
-
-        
-
-        // Send request to server instead of localStorage
-
-        try{
-
-          fetch('https://cnc-auto-design-1.onrender.com/api/requests', {
-
-            method: 'POST',
-
-            headers: {
-
-              'Content-Type': 'application/json',
-
-            },
-
-            body: JSON.stringify(req)
-
-          })
-
-          .then(response => response.json())
-
-          .then(data => {
-
-            if(data.success) {
-
-              console.log('Request sent to server successfully');
-
-            } else {
-
-              console.error('Failed to send request to server:', data.message);
-
-              // Fallback to localStorage if server fails
-
-              const list = JSON.parse(localStorage.getItem('requests')||'[]');
-
-              list.push(req);
-
-              localStorage.setItem('requests', JSON.stringify(list));
-
-            }
-
-          })
-
-          .catch(error => {
-
-            console.error('Error sending request to server:', error);
-
-            // Fallback to localStorage if server is not available
-
-            const list = JSON.parse(localStorage.getItem('requests')||'[]');
-
-            list.push(req);
-
-            localStorage.setItem('requests', JSON.stringify(list));
-
-          });
-
-        }catch(e){ 
-
-          console.error('queueRequest failed', e);
-
-          // Fallback to localStorage
-
-          const list = JSON.parse(localStorage.getItem('requests')||'[]');
-
-          list.push(req);
-
-          localStorage.setItem('requests', JSON.stringify(list));
-
+      // Close on click outside
+      successOverlay.addEventListener('click', function(e) {
+        if (e.target === successOverlay) {
+          document.body.removeChild(successOverlay);
         }
+      });
 
-      }catch(e){ console.error('queueRequest failed', e); }
-
-      // Redirect to official page with query so that page shows the success modal on top
-
-      window.location.href = `index.html?paid=1&plan=${plan}&method=${method}&trx=${trx}`;
-
+      // Close on ESC key
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          const overlay = document.querySelector('.success-wrap');
+          if (overlay && overlay.parentNode) {
+            overlay.parentNode.removeChild(overlay);
+          }
+        }
+      });
     }
 
-    
-
     // Load settings from admin panel
-
     function loadPaymentSettings(){
-
       try{
-
         // Try to load from server first
-
         fetch('https://cnc-auto-design-1.onrender.com/api/settings')
-
           .then(response => response.json())
 
           .then(settings => {
