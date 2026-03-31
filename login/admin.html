@@ -612,7 +612,7 @@
       getActive().then(list => {
         const u = list[i];
         if(!u) return;
-        if(confirm('Reject/Deactivate ' + u.name + '?')){
+        if(confirm('Reject/Deactivate ' + u.name + '? This will also delete from Firebase.')){
           // Delete from server
           fetch(`https://cnc-auto-design-1.onrender.com/api/active-users/${u.id}`, {
             method: 'DELETE'
@@ -621,6 +621,10 @@
           .then(data => {
             if(data.success) {
               console.log('User rejected successfully');
+              
+              // Delete from Firebase
+              deleteUserFromFirebase(u.email);
+              
               // Update UI
               getActive().then(updatedList => {
                 document.getElementById('badge-active').textContent = updatedList.length;
@@ -639,6 +643,49 @@
           });
         }
       });
+    }
+    
+    // Function to delete user from Firebase
+    function deleteUserFromFirebase(email) {
+      // Delete from Firestore 'users' collection
+      db.collection('users')
+        .where('email', '==', email)
+        .get()
+        .then(querySnapshot => {
+          const batch = db.batch();
+          querySnapshot.forEach(doc => {
+            batch.delete(doc.ref);
+          });
+          
+          return batch.commit();
+        })
+        .then(() => {
+          console.log(`User ${email} deleted from Firebase Firestore`);
+          
+          // Try to delete from Firebase Authentication (requires Admin SDK on server)
+          // For now, we'll just update their status to 'rejected'
+          return db.collection('users')
+            .where('email', '==', email)
+            .get();
+        })
+        .then(querySnapshot => {
+          const batch = db.batch();
+          querySnapshot.forEach(doc => {
+            batch.update(doc.ref, { 
+              status: 'rejected',
+              rejectedAt: new Date().toISOString()
+            });
+          });
+          return batch.commit();
+        })
+        .then(() => {
+          console.log(`User ${email} status updated to rejected in Firebase`);
+          showFirebaseStatus(`✅ User ${email} removed from Firebase`, 'success');
+        })
+        .catch(error => {
+          console.error('Error deleting from Firebase:', error);
+          showFirebaseStatus(`❌ Failed to delete ${email} from Firebase`, 'error');
+        });
     }
     // Sidebar links
     function goHome(){ window.open('../login/index.html','_blank'); }
@@ -1218,20 +1265,34 @@
                       }, 500);
                     }, 1000);
                     
-                    // Notify local desktop app (if running) to auto-login
+                    // Notify render server for desktop login
                     try{
                       const plan = (approved.plan||'').toLowerCase();
-                      fetch('http://127.0.0.1:51234/approve',{
+                      
+                      fetch('https://cnc-auto-design-1.onrender.com/api/desktop-login-approve', {
                         method:'POST',
                         headers:{'Content-Type':'application/json'},
                         body: JSON.stringify({
                           email: approved.email,
-                          plan: (plan==='premium') ? '12m' : (plan==='basic'?'6m':approved.plan||'6m'),
+                          plan: plan,
                           days: days
                         })
-                      }).catch(()=>{});
-                    }catch(e){ console.warn('desktop notify failed', e); }
-                    alert('Approved and added to payment statistics!');
+                      }).then(response => {
+                        if (response.ok) {
+                          console.log('Desktop notified successfully via render server');
+                          alert('Approved and added to payment statistics! Desktop app updated.');
+                        } else {
+                          console.log('Desktop notification failed, but user approved');
+                          alert('Approved and added to payment statistics!');
+                        }
+                      }).catch(() => {
+                        console.log('Desktop notification failed, but user approved');
+                        alert('Approved and added to payment statistics!');
+                      });
+                    }catch(e){ 
+                      console.warn('render server notify failed', e); 
+                      alert('Approved and added to payment statistics!');
+                    }
                   } else {
                     console.error('Failed to add user to active list:', data.message);
                     alert('Failed to approve user');
@@ -1410,7 +1471,7 @@
       infoEl.style.display = 'block';
     }
     function rejectAccount(){
-      if(confirm('Reject this account?')){
+      if(confirm('Reject this account? This will also delete from Firebase.')){
         // Get current user details
         const name = document.getElementById('d-name').value;
         const email = document.getElementById('d-email').value;
@@ -1429,6 +1490,9 @@
               if(data.success) {
                 console.log('Account rejected successfully');
                 
+                // Delete from Firebase
+                deleteUserFromFirebase(email);
+                
                 // Update badge count
                 getActive().then(updatedList => {
                   document.getElementById('badge-active').textContent = updatedList.length;
@@ -1439,7 +1503,7 @@
                   openActiveList();
                 }
                 
-                alert('Account rejected and removed successfully!');
+                alert('Account rejected and removed successfully from server and Firebase!');
                 closeDetails();
               } else {
                 console.error('Failed to reject account:', data.message);
