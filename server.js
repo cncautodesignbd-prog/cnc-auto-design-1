@@ -9,7 +9,7 @@ app.use(express.json());
 
 // Firebase Admin SDK
 const admin = require('firebase-admin');
-const serviceAccount = require('./cnc-auto-design-firebase-adminsdk.json');
+const serviceAccount = require('./firebase_config.json');
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
