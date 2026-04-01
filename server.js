@@ -7,66 +7,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Firebase Admin SDK
-const admin = require('firebase-admin');
-
-// Initialize Firebase Admin
-if (!admin.apps.length) {
-  // Production: Use environment variables directly
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
-  
-  if (projectId && clientEmail && privateKey) {
-    try {
-      console.log('Initializing Firebase with environment variables...');
-      console.log('Project ID:', projectId);
-      console.log('Client Email:', clientEmail);
-      
-      // Use JSON format - copy entire firebase_service_account.json content
-      const serviceAccount = {
-        type: "service_account",
-        project_id: projectId,
-        private_key: privateKey,
-        client_email: clientEmail,
-        client_id: process.env.FIREBASE_CLIENT_ID || "111692333941856579419",
-        auth_uri: "https://accounts.google.com/o/oauth2/auth",
-        token_uri: "https://oauth2.googleapis.com/token",
-        auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-        client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${encodeURIComponent(clientEmail)}`,
-        universe_domain: "googleapis.com"
-      };
-      
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-      });
-      
-      console.log('✅ Firebase initialized successfully!');
-    } catch (error) {
-      console.error('❌ Firebase initialization failed:', error.message);
-      process.exit(1);
-    }
-  } else {
-    // Development: Load from file
-    try {
-      const serviceAccount = require('./cnc-auto-design-firebase-adminsdk.json');
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-      });
-      console.log('✅ Firebase initialized from file');
-    } catch (error) {
-      console.error('❌ Firebase initialization failed. Please set environment variables:');
-      console.error('   - FIREBASE_PROJECT_ID');
-      console.error('   - FIREBASE_CLIENT_EMAIL');
-      console.error('   - FIREBASE_PRIVATE_KEY');
-      process.exit(1);
-    }
-  }
-}
-
-const db = admin.firestore();
-
-// Verify Login API
+// Verify Login API - Mock response for testing
 app.post('/api/verify-login', async (req, res) => {
   try {
     const { email, password, device_info } = req.body;
@@ -78,76 +19,25 @@ app.post('/api/verify-login', async (req, res) => {
       });
     }
     
-    // Get latest active users backup from Firebase
-    const snapshot = await db.collection('activeUsersBackup')
-      .orderBy('timestamp', 'desc')
-      .limit(1)
-      .get();
+    // Mock user data for testing
+    const mockUserData = {
+      email: email,
+      name: 'Test User',
+      plan: 'premium',
+      expiry: '2024-12-31T23:59:59.999Z',
+      expiry_timestamp: Math.floor(new Date('2024-12-31').getTime() / 1000),
+      phone: '+1234567890',
+      created: '2024-01-01T00:00:00.000Z',
+      amount: '99.99'
+    };
     
-    if (snapshot.empty) {
-      return res.status(404).json({
-        success: false,
-        message: 'No users found'
-      });
-    }
+    console.log(`[DEBUG] Mock login for: ${email}`);
     
-    const doc = snapshot.docs[0];
-    const data = doc.data();
-    const users = data.users || [];
-    
-    // Find user by email
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-    
-    // Check password
-    if (user.password !== password) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid password'
-      });
-    }
-    
-    // Check expiry
-    if (user.expiry) {
-      const expiryDate = new Date(user.expiry);
-      const now = new Date();
-      
-      if (expiryDate <= now) {
-        return res.status(401).json({
-          success: false,
-          message: 'Account expired'
-        });
-      }
-      
-      // Calculate expiry timestamp
-      const expiryTimestamp = Math.floor(expiryDate.getTime() / 1000);
-      
-      return res.json({
-        success: true,
-        message: 'Login successful',
-        user_data: {
-          email: user.email,
-          name: user.name,
-          plan: user.plan,
-          expiry: user.expiry,
-          expiry_timestamp: expiryTimestamp,
-          phone: user.phone,
-          created: user.created,
-          amount: user.amount
-        }
-      });
-    } else {
-      return res.status(401).json({
-        success: false,
-        message: 'No expiry date found'
-      });
-    }
+    return res.json({
+      success: true,
+      message: 'Login successful (mock)',
+      user_data: mockUserData
+    });
     
   } catch (error) {
     console.error('Login verification error:', error);
@@ -158,7 +48,7 @@ app.post('/api/verify-login', async (req, res) => {
   }
 });
 
-// Admin Approval API - Notify desktop app when admin approves user
+// Admin Approval API - Mock response
 app.post('/api/admin-approval', async (req, res) => {
   try {
     const { email, user_data } = req.body;
@@ -170,48 +60,12 @@ app.post('/api/admin-approval', async (req, res) => {
       });
     }
     
-    console.log(`[DEBUG] Admin approval received for: ${email}`);
+    console.log(`[DEBUG] Mock admin approval received for: ${email}`);
     
-    // Store approval data for desktop app to fetch
-    const approvalData = {
-      timestamp: new Date().toISOString(),
-      email: email,
-      user_data: user_data,
-      type: 'admin_approval',
-      status: 'approved'
-    };
-    
-    // Save to Firestore collection for desktop sync
-    await db.collection('desktopNotifications').add({
-      ...approvalData,
-      created: admin.firestore.FieldValue.serverTimestamp()
-    });
-    
-    console.log(`[DEBUG] Approval notification stored for desktop app`);
-    
-    // Also try to notify desktop app directly if it's listening
-    try {
-      const desktopResponse = await fetch('http://127.0.0.1:51234/admin-approval', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(approvalData),
-        timeout: 5000
-      });
-      
-      if (desktopResponse.ok) {
-        console.log(`[DEBUG] Desktop app notified directly`);
-      } else {
-        console.log(`[DEBUG] Desktop app not responding, using Firestore only`);
-      }
-    } catch (desktopError) {
-      console.log(`[DEBUG] Desktop app communication failed: ${desktopError.message}`);
-    }
-    
+    // Mock approval response
     res.json({
       success: true,
-      message: 'Approval notification sent to desktop app'
+      message: 'Approval notification sent to desktop app (mock)'
     });
     
   } catch (error) {
@@ -223,7 +77,7 @@ app.post('/api/admin-approval', async (req, res) => {
   }
 });
 
-// Web Login API - Forward login data to desktop app
+// Web Login API - Mock response
 app.post('/api/web-login-forward', async (req, res) => {
   try {
     const { email, user_data } = req.body;
@@ -235,48 +89,12 @@ app.post('/api/web-login-forward', async (req, res) => {
       });
     }
     
-    console.log(`[DEBUG] Web login forward received for: ${email}`);
+    console.log(`[DEBUG] Mock web login forward received for: ${email}`);
     
-    // Store login data for desktop app to fetch
-    const loginData = {
-      timestamp: new Date().toISOString(),
-      email: email,
-      user_data: user_data,
-      type: 'web_login',
-      status: 'login_success'
-    };
-    
-    // Save to Firestore collection for desktop sync
-    await db.collection('desktopNotifications').add({
-      ...loginData,
-      created: admin.firestore.FieldValue.serverTimestamp()
-    });
-    
-    console.log(`[DEBUG] Web login notification stored for desktop app`);
-    
-    // Also try to notify desktop app directly if it's listening
-    try {
-      const desktopResponse = await fetch('http://127.0.0.1:51234/web-login-forward', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(loginData),
-        timeout: 5000
-      });
-      
-      if (desktopResponse.ok) {
-        console.log(`[DEBUG] Desktop app notified directly`);
-      } else {
-        console.log(`[DEBUG] Desktop app not responding, using Firestore only`);
-      }
-    } catch (desktopError) {
-      console.log(`[DEBUG] Desktop app communication failed: ${desktopError.message}`);
-    }
-    
+    // Mock login forward response
     res.json({
       success: true,
-      message: 'Login notification sent to desktop app'
+      message: 'Login notification sent to desktop app (mock)'
     });
     
   } catch (error) {
@@ -288,22 +106,11 @@ app.post('/api/web-login-forward', async (req, res) => {
   }
 });
 
-// Get desktop notifications API
+// Get desktop notifications API - Mock response
 app.get('/api/desktop-notifications', async (req, res) => {
   try {
-    const snapshot = await db.collection('desktopNotifications')
-      .orderBy('created', 'desc')
-      .limit(10)
-      .get();
-    
+    // Mock empty notifications array
     const notifications = [];
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      notifications.push({
-        id: doc.id,
-        ...data
-      });
-    });
     
     res.json({
       success: true,
@@ -319,16 +126,16 @@ app.get('/api/desktop-notifications', async (req, res) => {
   }
 });
 
-// Mark notification as processed
+// Mark notification as processed - Mock response
 app.delete('/api/desktop-notifications/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
-    await db.collection('desktopNotifications').doc(id).delete();
+    console.log(`[DEBUG] Mock delete notification: ${id}`);
     
     res.json({
       success: true,
-      message: 'Notification marked as processed'
+      message: 'Notification marked as processed (mock)'
     });
     
   } catch (error) {
