@@ -7,20 +7,25 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Firebase Admin SDK
-const admin = require('firebase-admin');
-const serviceAccount = require('./firebase_config.json');
+// Mock database for testing (without Firebase)
+const mockUsers = [
+  {
+    email: 'test@example.com',
+    password: 'password123',
+    name: 'Test User',
+    plan: 'basic',
+    expiry: '2024-12-31',
+    created: '2024-01-01'
+  }
+];
 
-// Initialize Firebase Admin
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
-}
+// Mock pending requests (for admin panel)
+const mockPendingRequests = [];
 
-const db = admin.firestore();
+// Mock active users (for admin panel)
+const mockActiveUsers = [];
 
-// Verify Login API
+// Verify Login API (without Firebase)
 app.post('/api/verify-login', async (req, res) => {
   try {
     const { email, password, device_info } = req.body;
@@ -32,25 +37,8 @@ app.post('/api/verify-login', async (req, res) => {
       });
     }
     
-    // Get latest active users backup from Firebase
-    const snapshot = await db.collection('activeUsersBackup')
-      .orderBy('timestamp', 'desc')
-      .limit(1)
-      .get();
-    
-    if (snapshot.empty) {
-      return res.status(404).json({
-        success: false,
-        message: 'No users found'
-      });
-    }
-    
-    const doc = snapshot.docs[0];
-    const data = doc.data();
-    const users = data.users || [];
-    
-    // Find user by email
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    // Find user in mock database
+    const user = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
     
     if (!user) {
       return res.status(404).json({
@@ -91,9 +79,9 @@ app.post('/api/verify-login', async (req, res) => {
           plan: user.plan,
           expiry: user.expiry,
           expiry_timestamp: expiryTimestamp,
-          phone: user.phone,
+          phone: user.phone || '',
           created: user.created,
-          amount: user.amount
+          amount: 0
         }
       });
     } else {
@@ -112,9 +100,175 @@ app.post('/api/verify-login', async (req, res) => {
   }
 });
 
+// Desktop Login API (without Firebase)
+app.post('/api/desktop-login', async (req, res) => {
+  try {
+    const { email, user_data } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email required'
+      });
+    }
+    
+    // Create desktop login request (mock)
+    const loginRequest = {
+      id: Date.now().toString(),
+      email: email,
+      user_data: user_data || {},
+      status: 'pending',
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('Desktop login request created:', loginRequest);
+    
+    res.json({
+      success: true,
+      message: 'Desktop login request created',
+      request_id: loginRequest.id
+    });
+    
+  } catch (error) {
+    console.error('Desktop login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// Desktop Login Requests API (mock)
+app.get('/api/desktop-login-requests', async (req, res) => {
+  try {
+    // Return empty array for now (mock)
+    res.json([]);
+    
+  } catch (error) {
+    console.error('Get desktop login requests error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// Update Desktop Login Request (mock)
+app.patch('/api/desktop-login-requests/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    console.log(`Update request ${id} to status: ${status}`);
+    
+    res.json({ success: true });
+    
+  } catch (error) {
+    console.error('Update desktop login request error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// Desktop Login Approve API (mock)
+app.post('/api/desktop-login-approve', async (req, res) => {
+  try {
+    const { email, plan, days } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email required'
+      });
+    }
+    
+    // Create desktop login request for approved user (mock)
+    const loginRequest = {
+      id: Date.now().toString(),
+      email: email,
+      user_data: {
+        plan: plan || 'basic',
+        expiry: new Date(Date.now() + (days || 180) * 24 * 60 * 60 * 1000).toISOString(),
+        approved: true
+      },
+      status: 'pending',
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('Desktop login approval created:', loginRequest);
+    
+    res.json({
+      success: true,
+      message: 'Desktop login approval created'
+    });
+    
+  } catch (error) {
+    console.error('Desktop login approve error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Admin Panel APIs (mock)
+app.get('/api/requests', (req, res) => {
+  res.json(mockPendingRequests);
+});
+
+app.post('/api/requests', (req, res) => {
+  const { email, phone, plan, days, amount } = req.body;
+  const newRequest = {
+    id: Date.now().toString(),
+    email,
+    phone: phone || '',
+    plan: plan || 'basic',
+    days: days || 180,
+    amount: amount || 0,
+    status: 'pending',
+    timestamp: new Date().toISOString()
+  };
+  mockPendingRequests.push(newRequest);
+  res.json({ success: true, request: newRequest });
+});
+
+app.delete('/api/requests/:id', (req, res) => {
+  const { id } = req.params;
+  const index = mockPendingRequests.findIndex(req => req.id === id);
+  if (index !== -1) {
+    mockPendingRequests.splice(index, 1);
+    res.json({ success: true });
+  } else {
+    res.status(404).json({ success: false, message: 'Request not found' });
+  }
+});
+
+app.get('/api/active-users', (req, res) => {
+  res.json(mockActiveUsers);
+});
+
+app.post('/api/active-users', (req, res) => {
+  const { email, name, phone, plan, days, amount } = req.body;
+  const newUser = {
+    id: Date.now().toString(),
+    email,
+    name,
+    phone: phone || '',
+    plan: plan || 'basic',
+    expiry: new Date(Date.now() + (days || 180) * 24 * 60 * 60 * 1000).toISOString(),
+    created: new Date().toISOString(),
+    amount: amount || 0,
+    status: 'active'
+  };
+  mockActiveUsers.push(newUser);
+  res.json({ success: true, user: newUser });
 });
 
 // Start server
