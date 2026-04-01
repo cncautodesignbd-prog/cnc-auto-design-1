@@ -19,28 +19,7 @@ if (!admin.apps.length) {
     // Production: Load from environment variable
     try {
       const serviceAccount = JSON.parse(serviceAccountJson);
-      // Fix private key formatting - alternative approach
-      if (serviceAccount.private_key) {
-        // Remove all escape sequences and restore proper newlines
-        let privateKey = serviceAccount.private_key;
-        
-        // Method 1: Replace literal \n with actual newlines
-        privateKey = privateKey.replace(/\\n/g, '\n');
-        
-        // Method 2: Replace escaped quotes if any
-        privateKey = privateKey.replace(/\\"/g, '"');
-        
-        // Method 3: Ensure proper key format
-        if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
-          // If key is malformed, try to reconstruct from original
-          const originalKey = process.env.FIREBASE_PRIVATE_KEY_ORIGINAL;
-          if (originalKey) {
-            privateKey = originalKey;
-          }
-        }
-        
-        serviceAccount.private_key = privateKey;
-      }
+      console.log('Firebase service account parsed successfully');
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount)
       });
