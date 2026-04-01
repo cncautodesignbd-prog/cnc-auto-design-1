@@ -31,7 +31,7 @@ if (!admin.apps.length) {
       const serviceAccount = {
         type: "service_account",
         project_id: projectId,
-        private_key: Buffer.from(privateKey, 'base64').toString('utf8'),
+        private_key: privateKey.trim(),
         client_email: clientEmail,
         client_id: process.env.FIREBASE_CLIENT_ID || "111692333941856579419",
         auth_uri: "https://accounts.google.com/o/oauth2/auth",
