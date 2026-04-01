@@ -180,8 +180,10 @@ app.post('/api/web-login', async (req, res) => {
   }
 });
 
-// Desktop Login Requests API (mock)
+// Mock desktop login requests (for web login)
 const mockDesktopLoginRequests = [];
+
+// Desktop Login Requests API (mock)
 app.get('/api/desktop-login-requests', async (req, res) => {
   try {
     // Return pending desktop login requests and mark them as processed
