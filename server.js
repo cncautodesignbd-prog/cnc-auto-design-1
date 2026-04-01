@@ -17,11 +17,20 @@ if (!admin.apps.length) {
   
   if (serviceAccountJson) {
     // Production: Load from environment variable
-    const serviceAccount = JSON.parse(serviceAccountJson);
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
-    console.log('Firebase initialized from environment variable');
+    try {
+      const serviceAccount = JSON.parse(serviceAccountJson);
+      // Fix private key formatting
+      if (serviceAccount.private_key) {
+        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+      }
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+      console.log('Firebase initialized from environment variable');
+    } catch (error) {
+      console.error('Failed to parse Firebase service account:', error);
+      process.exit(1);
+    }
   } else {
     // Development: Load from file
     try {
