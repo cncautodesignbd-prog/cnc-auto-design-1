@@ -19,9 +19,12 @@ if (!admin.apps.length) {
     // Production: Load from environment variable
     try {
       const serviceAccount = JSON.parse(serviceAccountJson);
-      // Fix private key formatting
+      // Fix private key formatting - handle multiple escape sequences
       if (serviceAccount.private_key) {
-        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+        serviceAccount.private_key = serviceAccount.private_key
+          .replace(/\\n/g, '\n')  // Replace escaped newlines
+          .replace(/\\\\n/g, '\n') // Replace double escaped newlines
+          .replace(/\\\\\\n/g, '\n'); // Replace triple escaped newlines
       }
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount)
