@@ -23,6 +23,9 @@ if (!admin.apps.length) {
       console.log('Project ID:', projectId);
       console.log('Client Email:', clientEmail);
       console.log('Private Key length:', privateKey.length);
+      console.log('Private Key starts with BEGIN:', privateKey.includes('BEGIN PRIVATE KEY'));
+      console.log('Private Key has newlines:', privateKey.includes('\n'));
+      console.log('Private Key first 100 chars:', privateKey.substring(0, 100));
       
       // Create service account object
       const serviceAccount = {
