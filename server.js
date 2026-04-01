@@ -218,6 +218,18 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Status endpoint for desktop app sync
+app.get('/status', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    logged_in: false,
+    user_email: null,
+    user_plan: null,
+    license_expiry: null
+  });
+});
+
 // Admin Panel APIs (mock)
 app.get('/api/settings', (req, res) => {
   res.json({
