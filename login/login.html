@@ -1336,34 +1336,35 @@
       }
     }
     
-    // Helper function to send login data to desktop app
+    // Helper function to send login data to desktop app via Render server
     async function sendLoginToDesktop(loginData) {
       // Save to localStorage for desktop app to read
       localStorage.setItem('cnc_desktop_login_sync', JSON.stringify(loginData));
       localStorage.setItem('cnc_login_flag', 'true');
       
-      // Send to desktop app via local ports
-      const ports = [51234, 51235, 51236, 51237, 51238];
-      
-      for (const port of ports) {
-        try {
-          await fetch(`http://127.0.0.1:${port}/web-login`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-              email: loginData.email,
-              user_data: {
-                plan: loginData.user_data.plan,
-                expiry: loginData.user_data.expiry ? new Date(loginData.user_data.expiry).getTime() : Date.now() + 180*24*60*60*1000,
-                name: loginData.user_data.name,
-                created: loginData.user_data.created || ''
-              }
-            })
-          });
-          break;
-        } catch(e) {
-          continue;
+      // Send to Render server instead of local ports
+      try {
+        const response = await fetch('https://cnc-auto-design-1.onrender.com/api/web-login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            email: loginData.email,
+            user_data: {
+              plan: loginData.user_data.plan,
+              expiry: loginData.user_data.expiry ? new Date(loginData.user_data.expiry).getTime() : Date.now() + 180*24*60*60*1000,
+              name: loginData.user_data.name,
+              created: loginData.user_data.created || ''
+            }
+          })
+        });
+        
+        if (response.ok) {
+          console.log('Login data sent to Render server successfully');
+        } else {
+          console.log('Failed to send to Render server, using localStorage only');
         }
+      } catch (error) {
+        console.log('Render server communication failed, using localStorage only');
       }
     }
 
