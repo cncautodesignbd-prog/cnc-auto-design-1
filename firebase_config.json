@@ -1,0 +1,24 @@
+{
+  "firebase_config": {
+    "apiKey": "AIzaSyBnv7vkXL4clxbTI4ThSGS9N4no83r0luw",
+    "authDomain": "cnc-auto-design.firebaseapp.com",
+    "databaseURL": "https://cnc-auto-design-default-rtdb.europe-west1.firebasedatabase.app",
+    "projectId": "cnc-auto-design",
+    "storageBucket": "cnc-auto-design.firebasestorage.app",
+    "messagingSenderId": "264459711681",
+    "appId": "1:264459711681:web:567135f5e2dca023651040",
+    "measurementId": "G-VS4TMDVK3S"
+  },
+  "collections": {
+    "users": "active_users",
+    "pending_requests": "pending_requests",
+    "user_logs": "user_logs",
+    "admin_logs": "admin_logs",
+    "login_sessions": "loginSessions"
+  },
+  "auth_settings": {
+    "require_email_verification": false,
+    "allow_email_password": true,
+    "enable_anonymous_auth": false
+  }
+}

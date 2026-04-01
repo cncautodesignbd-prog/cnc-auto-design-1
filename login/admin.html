@@ -395,7 +395,6 @@
     function syncFromFirebase() {
       showFirebaseStatus('🔄 Syncing from Firebase...', 'info');
       
-      // First get data from Firebase
       db.collection('activeUsersBackup')
         .orderBy('timestamp', 'desc')
         .limit(1)
@@ -406,35 +405,14 @@
           const data = doc.data();
           
           if (data && data.users) {
-            // Now sync Firebase users to Render server
-            fetch('https://cnc-auto-design-1.onrender.com/api/sync-firebase-users', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                users: data.users
-              })
-            })
-            .then(response => response.json())
-            .then(syncResult => {
-              if (syncResult.success) {
-                // Update localStorage with Firebase data
-                localStorage.setItem('activeUsers', JSON.stringify(data.users));
-                
-                // Refresh the active users view
-                openActiveList();
-                
-                console.log('Synced from Firebase to Render server:', syncResult);
-                showFirebaseStatus(`✅ Synced ${syncResult.synced} new, ${syncResult.updated} updated users`, 'success');
-              } else {
-                showFirebaseStatus('❌ Render sync failed', 'error');
-              }
-            })
-            .catch(error => {
-              console.error('Render sync error:', error);
-              showFirebaseStatus('❌ Render sync failed', 'error');
-            });
+            // Update localStorage with Firebase data
+            localStorage.setItem('activeUsers', JSON.stringify(data.users));
+            
+            // Refresh the active users view
+            openActiveList();
+            
+            console.log('Synced from Firebase:', data.users.length, 'users');
+            showFirebaseStatus(`✅ Synced ${data.users.length} users from Firebase`, 'success');
           } else {
             showFirebaseStatus('📭 No users found in Firebase', 'warning');
           }
@@ -444,7 +422,7 @@
       })
       .catch(error => {
         console.error('Firebase sync error:', error);
-        showFirebaseStatus('❌ Firebase sync failed', 'error');
+        showFirebaseStatus('❌ Sync failed', 'error');
       });
     }
 
@@ -916,7 +894,7 @@
         
         if(user){
           // Update user on server
-          fetch(`https://cnc-auto-design-1.onrender.com/api/active-users/${user.id}`, {
+          fetch(`http://localhost:3000/api/active-users/${user.id}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -1301,7 +1279,7 @@
                       function tryNextPort() {
                         if (portIndex < tryPorts.length) {
                           const currentPort = tryPorts[portIndex];
-                          fetch(`https://cnc-auto-design-1.onrender.com/api/approve`,{
+                          fetch(`http://127.0.0.1:${currentPort}/approve`,{
                             method:'POST',
                             headers:{'Content-Type':'application/json'},
                             body: JSON.stringify({
@@ -1611,7 +1589,7 @@
               }
               
               // Also update online sync server
-              fetch('https://cnc-auto-design-1.onrender.com/api/user/update', {
+              fetch('http://localhost:5002/api/user/update', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -1636,7 +1614,7 @@
               }).catch(err => console.log('Online sync server not available:', err));
               
               // Also update real-time sync server
-              fetch('https://cnc-auto-design-1.onrender.com/api/user/update', {
+              fetch('http://localhost:5001/api/user/update', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
