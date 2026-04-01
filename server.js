@@ -25,7 +25,7 @@ if (!admin.apps.length) {
       const serviceAccount = {
         type: "service_account",
         project_id: projectId,
-        private_key: privateKey.includes('\\n') ? privateKey.replace(/\\n/g, '\n') : privateKey,
+        private_key: privateKey.includes('BEGIN PRIVATE KEY') && !private_key.includes('\n') ? privateKey.replace(/([A-Za-z0-9+/=]{76})/g, '$1\n') : privateKey.includes('\\n') ? privateKey.replace(/\\n/g, '\n') : privateKey,
         client_email: clientEmail,
         client_id: process.env.FIREBASE_CLIENT_ID || "111692333941856579419",
         auth_uri: "https://accounts.google.com/o/oauth2/auth",
