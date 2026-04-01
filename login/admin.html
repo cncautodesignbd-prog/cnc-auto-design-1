@@ -1265,34 +1265,48 @@
                       }, 500);
                     }, 1000);
                     
-                    // Notify render server for desktop login
+                    // Notify local desktop app (if running) to auto-login
                     try{
                       const plan = (approved.plan||'').toLowerCase();
                       
-                      fetch('https://cnc-auto-design-1.onrender.com/api/desktop-login-approve', {
-                        method:'POST',
-                        headers:{'Content-Type':'application/json'},
-                        body: JSON.stringify({
-                          email: approved.email,
-                          plan: plan,
-                          days: days
-                        })
-                      }).then(response => {
-                        if (response.ok) {
-                          console.log('Desktop notified successfully via render server');
-                          alert('Approved and added to payment statistics! Desktop app updated.');
+                      // Try to get the actual port from desktop app
+                      let desktopPort = 51234; // default
+                      
+                      // Try multiple ports starting from default
+                      const tryPorts = [51234, 51235, 51236, 51237, 51238, 51239, 51240];
+                      let portIndex = 0;
+                      
+                      function tryNextPort() {
+                        if (portIndex < tryPorts.length) {
+                          const currentPort = tryPorts[portIndex];
+                          fetch('https://cnc-auto-design-1.onrender.com/api/desktop-login-approve',{
+                            method:'POST',
+                            headers:{'Content-Type':'application/json'},
+                            body: JSON.stringify({
+                              email: approved.email,
+                              plan: plan,
+                              days: days
+                            })
+                          }).then(response => {
+                            if (response.ok) {
+                              console.log(`Desktop notified successfully on port ${currentPort}`);
+                              alert('Approved and added to payment statistics! Desktop app updated.');
+                            } else {
+                              portIndex++;
+                              tryNextPort();
+                            }
+                          }).catch(() => {
+                            portIndex++;
+                            tryNextPort();
+                          });
                         } else {
-                          console.log('Desktop notification failed, but user approved');
-                          alert('Approved and added to payment statistics!');
+                          alert('Approved and added to payment statistics! (Desktop app may need restart)');
                         }
-                      }).catch(() => {
-                        console.log('Desktop notification failed, but user approved');
-                        alert('Approved and added to payment statistics!');
-                      });
-                    }catch(e){ 
-                      console.warn('render server notify failed', e); 
-                      alert('Approved and added to payment statistics!');
-                    }
+                      }
+                      
+                      tryNextPort();
+                    }catch(e){ console.warn('desktop notify failed', e); }
+                    alert('Approved and added to payment statistics!');
                   } else {
                     console.error('Failed to add user to active list:', data.message);
                     alert('Failed to approve user');
