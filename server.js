@@ -22,16 +22,12 @@ if (!admin.apps.length) {
       console.log('Initializing Firebase with environment variables...');
       console.log('Project ID:', projectId);
       console.log('Client Email:', clientEmail);
-      console.log('Private Key length:', privateKey.length);
-      console.log('Private Key starts with BEGIN:', privateKey.includes('BEGIN PRIVATE KEY'));
-      console.log('Private Key has newlines:', privateKey.includes('\n'));
-      console.log('Private Key first 100 chars:', privateKey.substring(0, 100));
       
-      // Create service account object
+      // Use JSON format - copy entire firebase_service_account.json content
       const serviceAccount = {
         type: "service_account",
         project_id: projectId,
-        private_key: privateKey.trim(),
+        private_key: privateKey,
         client_email: clientEmail,
         client_id: process.env.FIREBASE_CLIENT_ID || "111692333941856579419",
         auth_uri: "https://accounts.google.com/o/oauth2/auth",
