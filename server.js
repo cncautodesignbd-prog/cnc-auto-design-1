@@ -219,6 +219,20 @@ app.get('/api/health', (req, res) => {
 });
 
 // Admin Panel APIs (mock)
+app.get('/api/settings', (req, res) => {
+  res.json({
+    success: true,
+    settings: {
+      auto_approve: false,
+      default_plan: 'basic',
+      default_days: 180,
+      max_requests_per_day: 50,
+      notification_email: '',
+      maintenance_mode: false
+    }
+  });
+});
+
 app.get('/api/requests', (req, res) => {
   res.json(mockPendingRequests);
 });
@@ -269,6 +283,93 @@ app.post('/api/active-users', (req, res) => {
   };
   mockActiveUsers.push(newUser);
   res.json({ success: true, user: newUser });
+});
+
+// Approve request endpoint
+app.post('/api/approve-request', (req, res) => {
+  try {
+    const { requestId, email, plan, days } = req.body;
+    
+    if (!requestId || !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Request ID and email required'
+      });
+    }
+    
+    // Find and update the request
+    const requestIndex = mockPendingRequests.findIndex(req => req.id === requestId);
+    if (requestIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Request not found'
+      });
+    }
+    
+    // Update request status
+    mockPendingRequests[requestIndex].status = 'approved';
+    mockPendingRequests[requestIndex].approved_at = new Date().toISOString();
+    
+    // Add to active users
+    const approvedUser = {
+      id: Date.now().toString(),
+      email,
+      name: mockPendingRequests[requestIndex].name || email,
+      phone: mockPendingRequests[requestIndex].phone || '',
+      plan: plan || 'basic',
+      expiry: new Date(Date.now() + (days || 180) * 24 * 60 * 60 * 1000).toISOString(),
+      created: new Date().toISOString(),
+      amount: mockPendingRequests[requestIndex].amount || 0,
+      status: 'active',
+      approved_by: 'admin',
+      original_request_id: requestId
+    };
+    
+    mockActiveUsers.push(approvedUser);
+    
+    console.log('Request approved:', { requestId, email, plan, days });
+    
+    res.json({
+      success: true,
+      message: 'Request approved successfully',
+      user: approvedUser
+    });
+    
+  } catch (error) {
+    console.error('Approve request error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// Direct approve endpoint (for admin panel)
+app.post('/approve', (req, res) => {
+  try {
+    const { email, plan, days } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email required'
+      });
+    }
+    
+    console.log('Desktop approve request:', { email, plan, days });
+    
+    res.json({
+      success: true,
+      message: 'Desktop approval successful'
+    });
+    
+  } catch (error) {
+    console.error('Desktop approve error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
 });
 
 // Start server
