@@ -472,6 +472,50 @@ app.delete('/api/active-users/:id', async (req, res) => {
   }
 });
 
+// Chat Messages API
+app.get('/api/chat-messages', (req, res) => {
+  res.json([]);
+});
+
+app.get('/api/chat-messages/sync', (req, res) => {
+  res.json({ success: true, message: 'Sync completed' });
+});
+
+// Exchange Rates API
+app.get('/data/exchange_rates.json', (req, res) => {
+  res.json({
+    USD: 1.0,
+    EUR: 0.85,
+    GBP: 0.73,
+    JPY: 110.5,
+    BDT: 110.0
+  });
+});
+
+// Auth Check API
+app.post('/api/auth/check', (req, res) => {
+  const { token } = req.body;
+  
+  if (!token) {
+    return res.status(400).json({
+      success: false,
+      message: 'Token required'
+    });
+  }
+  
+  // Mock token validation (in real implementation, verify with database)
+  res.json({
+    success: true,
+    valid: true,
+    user: {
+      id: '123',
+      email: 'user@example.com',
+      name: 'Test User',
+      plan: 'basic'
+    }
+  });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
