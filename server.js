@@ -138,11 +138,62 @@ app.post('/api/desktop-login', async (req, res) => {
   }
 });
 
+// Web Login API (receives login data from website)
+app.post('/api/web-login', async (req, res) => {
+  try {
+    const { email, user_data } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email required'
+      });
+    }
+    
+    // Create web login request for desktop app to pick up
+    const webLoginRequest = {
+      id: Date.now().toString(),
+      email: email,
+      user_data: user_data || {},
+      type: 'web_login',
+      status: 'pending',
+      timestamp: new Date().toISOString()
+    };
+    
+    // Store in mock desktop login requests array
+    mockDesktopLoginRequests.push(webLoginRequest);
+    
+    console.log('Web login request created:', webLoginRequest);
+    
+    res.json({
+      success: true,
+      message: 'Web login data received successfully',
+      request_id: webLoginRequest.id
+    });
+    
+  } catch (error) {
+    console.error('Web login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
 // Desktop Login Requests API (mock)
+const mockDesktopLoginRequests = [];
 app.get('/api/desktop-login-requests', async (req, res) => {
   try {
-    // Return empty array for now (mock)
-    res.json([]);
+    // Return pending desktop login requests and mark them as processed
+    const pendingRequests = mockDesktopLoginRequests.filter(req => req.status === 'pending');
+    
+    // Mark returned requests as processed
+    pendingRequests.forEach(req => {
+      req.status = 'processed';
+      req.processed_at = new Date().toISOString();
+    });
+    
+    res.json(pendingRequests);
     
   } catch (error) {
     console.error('Get desktop login requests error:', error);
@@ -206,6 +257,212 @@ app.post('/api/desktop-login-approve', async (req, res) => {
     
   } catch (error) {
     console.error('Desktop login approve error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// Firebase Sync API (sync users from Firebase to Render server)
+app.post('/api/sync-firebase-users', async (req, res) => {
+  try {
+    const { users } = req.body;
+    
+    if (!users || !Array.isArray(users)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Users array required'
+      });
+    }
+    
+    let syncedCount = 0;
+    let updatedCount = 0;
+    
+    for (const firebaseUser of users) {
+      const existingUserIndex = mockActiveUsers.findIndex(u => u.email.toLowerCase() === firebaseUser.email.toLowerCase());
+      
+      if (existingUserIndex === -1) {
+        // Add new user from Firebase
+        const newUser = {
+          id: firebaseUser.id || Date.now().toString(),
+          email: firebaseUser.email.toLowerCase(),
+          name: firebaseUser.name || firebaseUser.email.split('@')[0],
+          phone: firebaseUser.phone || '',
+          trx: firebaseUser.trx || '',
+          plan: firebaseUser.plan || 'basic',
+          method: firebaseUser.method || 'firebase',
+          created: firebaseUser.created || new Date().toISOString(),
+          expiry: firebaseUser.expiry || new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(),
+          status: 'active'
+        };
+        
+        mockActiveUsers.push(newUser);
+        syncedCount++;
+      } else {
+        // Update existing user with Firebase data
+        const existingUser = mockActiveUsers[existingUserIndex];
+        if (firebaseUser.name) existingUser.name = firebaseUser.name;
+        if (firebaseUser.phone) existingUser.phone = firebaseUser.phone;
+        if (firebaseUser.trx) existingUser.trx = firebaseUser.trx;
+        if (firebaseUser.plan) existingUser.plan = firebaseUser.plan;
+        if (firebaseUser.method) existingUser.method = firebaseUser.method;
+        if (firebaseUser.created) existingUser.created = firebaseUser.created;
+        if (firebaseUser.expiry) existingUser.expiry = firebaseUser.expiry;
+        
+        updatedCount++;
+      }
+    }
+    
+    console.log(`Firebase sync completed: ${syncedCount} new users, ${updatedCount} updated users`);
+    
+    res.json({
+      success: true,
+      message: `Firebase sync completed: ${syncedCount} new users, ${updatedCount} updated users`,
+      synced: syncedCount,
+      updated: updatedCount,
+      total: mockActiveUsers.length
+    });
+    
+  } catch (error) {
+    console.error('Firebase sync error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// User Update API (for admin panel)
+app.post('/api/user/update', async (req, res) => {
+  try {
+    const { email, name, phone, trx, plan, method, created, expiry } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email required'
+      });
+    }
+    
+    // Find user in active users
+    let userIndex = mockActiveUsers.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+    
+    // If user not found, create new user (for new registrations)
+    if (userIndex === -1) {
+      const newUser = {
+        id: Date.now().toString(),
+        email: email.toLowerCase(),
+        name: name || email.split('@')[0],
+        phone: phone || '',
+        trx: trx || '',
+        plan: plan || 'basic',
+        method: method || 'unknown',
+        created: created || new Date().toISOString(),
+        expiry: expiry || new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'active'
+      };
+      
+      mockActiveUsers.push(newUser);
+      console.log('New user created:', { email, name, plan });
+      
+      return res.json({
+        success: true,
+        message: 'User created successfully',
+        user: newUser
+      });
+    }
+    
+    // Update existing user data
+    if (name) mockActiveUsers[userIndex].name = name;
+    if (phone) mockActiveUsers[userIndex].phone = phone;
+    if (trx) mockActiveUsers[userIndex].trx = trx;
+    if (plan) mockActiveUsers[userIndex].plan = plan;
+    if (method) mockActiveUsers[userIndex].method = method;
+    if (created) mockActiveUsers[userIndex].created = created;
+    if (expiry) mockActiveUsers[userIndex].expiry = expiry;
+    
+    console.log('User updated:', { email, name, plan });
+    
+    res.json({
+      success: true,
+      message: 'User updated successfully',
+      user: mockActiveUsers[userIndex]
+    });
+    
+  } catch (error) {
+    console.error('User update error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// Active Users Update API (for admin panel)
+app.put('/api/active-users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { manualRank, manualRankColor } = req.body;
+    
+    // Find user by ID
+    const userIndex = mockActiveUsers.findIndex(u => u.id === id);
+    
+    if (userIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Update user data
+    if (manualRank !== undefined) mockActiveUsers[userIndex].manualRank = manualRank;
+    if (manualRankColor) mockActiveUsers[userIndex].manualRankColor = manualRankColor;
+    
+    console.log('Active user updated:', { id, manualRank, manualRankColor });
+    
+    res.json({
+      success: true,
+      message: 'User updated successfully',
+      user: mockActiveUsers[userIndex]
+    });
+    
+  } catch (error) {
+    console.error('Active user update error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// Delete Active User API
+app.delete('/api/active-users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Find user by ID
+    const userIndex = mockActiveUsers.findIndex(u => u.id === id);
+    
+    if (userIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Remove user
+    const deletedUser = mockActiveUsers.splice(userIndex, 1)[0];
+    
+    console.log('Active user deleted:', { id, email: deletedUser.email });
+    
+    res.json({
+      success: true,
+      message: 'User deleted successfully'
+    });
+    
+  } catch (error) {
+    console.error('Delete user error:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
