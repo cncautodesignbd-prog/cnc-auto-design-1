@@ -21,19 +21,42 @@ if (!admin.apps.length) {
       const serviceAccount = JSON.parse(serviceAccountJson);
       console.log('Firebase service account parsed successfully');
       
-      // Check if private key needs to be loaded separately
-      if (serviceAccount.private_key && serviceAccount.private_key.includes('PLACEHOLDER')) {
-        const privateKeyFromEnv = process.env.FIREBASE_PRIVATE_KEY;
-        if (privateKeyFromEnv) {
-          serviceAccount.private_key = privateKeyFromEnv;
-          console.log('Private key loaded from separate environment variable');
+      // Try to initialize Firebase with service account
+      try {
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount)
+        });
+        console.log('Firebase initialized from environment variable');
+      } catch (firebaseError) {
+        console.log('Firebase initialization failed, trying alternative method:', firebaseError.message);
+        
+        // Alternative: Try Base64 decode for private key
+        const privateKeyBase64 = process.env.FIREBASE_PRIVATE_KEY_BASE64;
+        const projectId = process.env.FIREBASE_PROJECT_ID || serviceAccount.project_id;
+        const clientEmail = process.env.FIREBASE_CLIENT_EMAIL || serviceAccount.client_email;
+        
+        if (privateKeyBase64 && projectId && clientEmail) {
+          try {
+            // Decode Base64 private key
+            const privateKey = Buffer.from(privateKeyBase64, 'base64').toString();
+            console.log('Private key decoded from Base64');
+            
+            admin.initializeApp({
+              credential: admin.credential.cert({
+                projectId,
+                clientEmail,
+                privateKey
+              })
+            });
+            console.log('Firebase initialized with Base64 decoded private key');
+          } catch (base64Error) {
+            console.error('Base64 decode failed:', base64Error);
+            throw new Error('Failed to decode private key from Base64');
+          }
+        } else {
+          throw new Error('Missing required environment variables for Firebase');
         }
       }
-      
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-      });
-      console.log('Firebase initialized from environment variable');
     } catch (error) {
       console.error('Failed to parse Firebase service account:', error);
       process.exit(1);
