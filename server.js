@@ -12,17 +12,29 @@ const admin = require('firebase-admin');
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
-  // Production: Try environment variables first
-  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
+  // Production: Use environment variables directly
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
   
-  if (serviceAccountJson) {
+  if (projectId && clientEmail && privateKey) {
     try {
-      console.log('Initializing Firebase with service account JSON...');
+      console.log('Initializing Firebase with environment variables...');
       
-      // Parse the service account JSON
-      const serviceAccount = JSON.parse(serviceAccountJson);
+      // Create service account object
+      const serviceAccount = {
+        type: "service_account",
+        project_id: projectId,
+        private_key: privateKey,
+        client_email: clientEmail,
+        client_id: process.env.FIREBASE_CLIENT_ID || "111692333941856579419",
+        auth_uri: "https://accounts.google.com/o/oauth2/auth",
+        token_uri: "https://oauth2.googleapis.com/token",
+        auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+        client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${encodeURIComponent(clientEmail)}`,
+        universe_domain: "googleapis.com"
+      };
       
-      // Initialize Firebase
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount)
       });
@@ -30,41 +42,7 @@ if (!admin.apps.length) {
       console.log('✅ Firebase initialized successfully!');
     } catch (error) {
       console.error('❌ Firebase initialization failed:', error.message);
-      console.log('Trying alternative method...');
-      
-      // Alternative: Create service account object from individual env vars
-      const projectId = process.env.FIREBASE_PROJECT_ID;
-      const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-      const privateKey = process.env.FIREBASE_PRIVATE_KEY;
-      
-      if (projectId && clientEmail && privateKey) {
-        try {
-          const serviceAccount = {
-            type: "service_account",
-            project_id: projectId,
-            private_key: privateKey,
-            client_email: clientEmail,
-            client_id: process.env.FIREBASE_CLIENT_ID || "111692333941856579419",
-            auth_uri: "https://accounts.google.com/o/oauth2/auth",
-            token_uri: "https://oauth2.googleapis.com/token",
-            auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
-            client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${encodeURIComponent(clientEmail)}`,
-            universe_domain: "googleapis.com"
-          };
-          
-          admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount)
-          });
-          
-          console.log('✅ Firebase initialized with constructed service account!');
-        } catch (altError) {
-          console.error('❌ Alternative method failed:', altError.message);
-          process.exit(1);
-        }
-      } else {
-        console.error('❌ Missing environment variables');
-        process.exit(1);
-      }
+      process.exit(1);
     }
   } else {
     // Development: Load from file
@@ -75,7 +53,10 @@ if (!admin.apps.length) {
       });
       console.log('✅ Firebase initialized from file');
     } catch (error) {
-      console.error('❌ Firebase initialization failed. Please set FIREBASE_SERVICE_ACCOUNT environment variable.');
+      console.error('❌ Firebase initialization failed. Please set environment variables:');
+      console.error('   - FIREBASE_PROJECT_ID');
+      console.error('   - FIREBASE_CLIENT_EMAIL');
+      console.error('   - FIREBASE_PRIVATE_KEY');
       process.exit(1);
     }
   }
