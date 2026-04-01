@@ -9,13 +9,32 @@ app.use(express.json());
 
 // Firebase Admin SDK
 const admin = require('firebase-admin');
-const serviceAccount = require('./cnc-auto-design-firebase-adminsdk.json');
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
+  // Try to load from environment variable first (for production)
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
+  
+  if (serviceAccountJson) {
+    // Production: Load from environment variable
+    const serviceAccount = JSON.parse(serviceAccountJson);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+    console.log('Firebase initialized from environment variable');
+  } else {
+    // Development: Load from file
+    try {
+      const serviceAccount = require('./cnc-auto-design-firebase-adminsdk.json');
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+      console.log('Firebase initialized from file');
+    } catch (error) {
+      console.error('Firebase service account file not found. Please set FIREBASE_SERVICE_ACCOUNT environment variable.');
+      process.exit(1);
+    }
+  }
 }
 
 const db = admin.firestore();
