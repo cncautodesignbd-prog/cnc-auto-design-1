@@ -7,25 +7,20 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Mock database for testing (without Firebase)
-const mockUsers = [
-  {
-    email: 'test@example.com',
-    password: 'password123',
-    name: 'Test User',
-    plan: 'basic',
-    expiry: '2024-12-31',
-    created: '2024-01-01'
-  }
-];
+// Firebase Admin SDK
+const admin = require('firebase-admin');
+const serviceAccount = require('./cnc-auto-design-firebase-adminsdk.json');
 
-// Mock pending requests (for admin panel)
-const mockPendingRequests = [];
+// Initialize Firebase Admin
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+}
 
-// Mock active users (for admin panel)
-const mockActiveUsers = [];
+const db = admin.firestore();
 
-// Verify Login API (without Firebase)
+// Verify Login API
 app.post('/api/verify-login', async (req, res) => {
   try {
     const { email, password, device_info } = req.body;
@@ -37,8 +32,25 @@ app.post('/api/verify-login', async (req, res) => {
       });
     }
     
-    // Find user in mock database
-    const user = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+    // Get latest active users backup from Firebase
+    const snapshot = await db.collection('activeUsersBackup')
+      .orderBy('timestamp', 'desc')
+      .limit(1)
+      .get();
+    
+    if (snapshot.empty) {
+      return res.status(404).json({
+        success: false,
+        message: 'No users found'
+      });
+    }
+    
+    const doc = snapshot.docs[0];
+    const data = doc.data();
+    const users = data.users || [];
+    
+    // Find user by email
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     
     if (!user) {
       return res.status(404).json({
@@ -79,9 +91,9 @@ app.post('/api/verify-login', async (req, res) => {
           plan: user.plan,
           expiry: user.expiry,
           expiry_timestamp: expiryTimestamp,
-          phone: user.phone || '',
+          phone: user.phone,
           created: user.created,
-          amount: 0
+          amount: user.amount
         }
       });
     } else {
@@ -100,234 +112,64 @@ app.post('/api/verify-login', async (req, res) => {
   }
 });
 
-// Desktop Login API (without Firebase)
-app.post('/api/desktop-login', async (req, res) => {
+// Admin Approval API - Notify desktop app when admin approves user
+app.post('/api/admin-approval', async (req, res) => {
   try {
     const { email, user_data } = req.body;
     
-    if (!email) {
+    if (!email || !user_data) {
       return res.status(400).json({
         success: false,
-        message: 'Email required'
+        message: 'Email and user_data required'
       });
     }
     
-    // Create desktop login request (mock)
-    const loginRequest = {
-      id: Date.now().toString(),
+    console.log(`[DEBUG] Admin approval received for: ${email}`);
+    
+    // Store approval data for desktop app to fetch
+    const approvalData = {
+      timestamp: new Date().toISOString(),
       email: email,
-      user_data: user_data || {},
-      status: 'pending',
-      timestamp: new Date().toISOString()
+      user_data: user_data,
+      type: 'admin_approval',
+      status: 'approved'
     };
     
-    console.log('Desktop login request created:', loginRequest);
-    
-    res.json({
-      success: true,
-      message: 'Desktop login request created',
-      request_id: loginRequest.id
+    // Save to Firestore collection for desktop sync
+    await db.collection('desktopNotifications').add({
+      ...approvalData,
+      created: admin.firestore.FieldValue.serverTimestamp()
     });
     
-  } catch (error) {
-    console.error('Desktop login error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
-
-// Web Login API (receives login data from website)
-app.post('/api/web-login', async (req, res) => {
-  try {
-    const { email, user_data } = req.body;
+    console.log(`[DEBUG] Approval notification stored for desktop app`);
     
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email required'
+    // Also try to notify desktop app directly if it's listening
+    try {
+      const desktopResponse = await fetch('http://127.0.0.1:51234/admin-approval', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(approvalData),
+        timeout: 5000
       });
-    }
-    
-    // Create web login request for desktop app to pick up
-    const webLoginRequest = {
-      id: Date.now().toString(),
-      email: email,
-      user_data: user_data || {},
-      type: 'web_login',
-      status: 'pending',
-      timestamp: new Date().toISOString()
-    };
-    
-    // Store in mock desktop login requests array
-    mockDesktopLoginRequests.push(webLoginRequest);
-    
-    console.log('Web login request created:', webLoginRequest);
-    
-    res.json({
-      success: true,
-      message: 'Web login data received successfully',
-      request_id: webLoginRequest.id
-    });
-    
-  } catch (error) {
-    console.error('Web login error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
-
-// Mock desktop login requests (for web login)
-const mockDesktopLoginRequests = [];
-
-// Desktop Login Requests API (mock)
-app.get('/api/desktop-login-requests', async (req, res) => {
-  try {
-    // Return pending desktop login requests and mark them as processed
-    const pendingRequests = mockDesktopLoginRequests.filter(req => req.status === 'pending');
-    
-    // Mark returned requests as processed
-    pendingRequests.forEach(req => {
-      req.status = 'processed';
-      req.processed_at = new Date().toISOString();
-    });
-    
-    res.json(pendingRequests);
-    
-  } catch (error) {
-    console.error('Get desktop login requests error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
-
-// Update Desktop Login Request (mock)
-app.patch('/api/desktop-login-requests/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-    
-    console.log(`Update request ${id} to status: ${status}`);
-    
-    res.json({ success: true });
-    
-  } catch (error) {
-    console.error('Update desktop login request error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
-
-// Desktop Login Approve API (mock)
-app.post('/api/desktop-login-approve', async (req, res) => {
-  try {
-    const { email, plan, days } = req.body;
-    
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email required'
-      });
-    }
-    
-    // Create desktop login request for approved user (mock)
-    const loginRequest = {
-      id: Date.now().toString(),
-      email: email,
-      user_data: {
-        plan: plan || 'basic',
-        expiry: new Date(Date.now() + (days || 180) * 24 * 60 * 60 * 1000).toISOString(),
-        approved: true
-      },
-      status: 'pending',
-      timestamp: new Date().toISOString()
-    };
-    
-    console.log('Desktop login approval created:', loginRequest);
-    
-    res.json({
-      success: true,
-      message: 'Desktop login approval created'
-    });
-    
-  } catch (error) {
-    console.error('Desktop login approve error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
-
-// Firebase Sync API (sync users from Firebase to Render server)
-app.post('/api/sync-firebase-users', async (req, res) => {
-  try {
-    const { users } = req.body;
-    
-    if (!users || !Array.isArray(users)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Users array required'
-      });
-    }
-    
-    let syncedCount = 0;
-    let updatedCount = 0;
-    
-    for (const firebaseUser of users) {
-      const existingUserIndex = mockActiveUsers.findIndex(u => u.email.toLowerCase() === firebaseUser.email.toLowerCase());
       
-      if (existingUserIndex === -1) {
-        // Add new user from Firebase
-        const newUser = {
-          id: firebaseUser.id || Date.now().toString(),
-          email: firebaseUser.email.toLowerCase(),
-          name: firebaseUser.name || firebaseUser.email.split('@')[0],
-          phone: firebaseUser.phone || '',
-          trx: firebaseUser.trx || '',
-          plan: firebaseUser.plan || 'basic',
-          method: firebaseUser.method || 'firebase',
-          created: firebaseUser.created || new Date().toISOString(),
-          expiry: firebaseUser.expiry || new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(),
-          status: 'active'
-        };
-        
-        mockActiveUsers.push(newUser);
-        syncedCount++;
+      if (desktopResponse.ok) {
+        console.log(`[DEBUG] Desktop app notified directly`);
       } else {
-        // Update existing user with Firebase data
-        const existingUser = mockActiveUsers[existingUserIndex];
-        if (firebaseUser.name) existingUser.name = firebaseUser.name;
-        if (firebaseUser.phone) existingUser.phone = firebaseUser.phone;
-        if (firebaseUser.trx) existingUser.trx = firebaseUser.trx;
-        if (firebaseUser.plan) existingUser.plan = firebaseUser.plan;
-        if (firebaseUser.method) existingUser.method = firebaseUser.method;
-        if (firebaseUser.created) existingUser.created = firebaseUser.created;
-        if (firebaseUser.expiry) existingUser.expiry = firebaseUser.expiry;
-        
-        updatedCount++;
+        console.log(`[DEBUG] Desktop app not responding, using Firestore only`);
       }
+    } catch (desktopError) {
+      console.log(`[DEBUG] Desktop app communication failed: ${desktopError.message}`);
     }
-    
-    console.log(`Firebase sync completed: ${syncedCount} new users, ${updatedCount} updated users`);
     
     res.json({
       success: true,
-      message: `Firebase sync completed: ${syncedCount} new users, ${updatedCount} updated users`,
-      synced: syncedCount,
-      updated: updatedCount,
-      total: mockActiveUsers.length
+      message: 'Approval notification sent to desktop app'
     });
     
   } catch (error) {
-    console.error('Firebase sync error:', error);
+    console.error('Admin approval error:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -335,65 +177,64 @@ app.post('/api/sync-firebase-users', async (req, res) => {
   }
 });
 
-// User Update API (for admin panel)
-app.post('/api/user/update', async (req, res) => {
+// Web Login API - Forward login data to desktop app
+app.post('/api/web-login-forward', async (req, res) => {
   try {
-    const { email, name, phone, trx, plan, method, created, expiry } = req.body;
+    const { email, user_data } = req.body;
     
-    if (!email) {
+    if (!email || !user_data) {
       return res.status(400).json({
         success: false,
-        message: 'Email required'
+        message: 'Email and user_data required'
       });
     }
     
-    // Find user in active users
-    let userIndex = mockActiveUsers.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+    console.log(`[DEBUG] Web login forward received for: ${email}`);
     
-    // If user not found, create new user (for new registrations)
-    if (userIndex === -1) {
-      const newUser = {
-        id: Date.now().toString(),
-        email: email.toLowerCase(),
-        name: name || email.split('@')[0],
-        phone: phone || '',
-        trx: trx || '',
-        plan: plan || 'basic',
-        method: method || 'unknown',
-        created: created || new Date().toISOString(),
-        expiry: expiry || new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(),
-        status: 'active'
-      };
-      
-      mockActiveUsers.push(newUser);
-      console.log('New user created:', { email, name, plan });
-      
-      return res.json({
-        success: true,
-        message: 'User created successfully',
-        user: newUser
+    // Store login data for desktop app to fetch
+    const loginData = {
+      timestamp: new Date().toISOString(),
+      email: email,
+      user_data: user_data,
+      type: 'web_login',
+      status: 'login_success'
+    };
+    
+    // Save to Firestore collection for desktop sync
+    await db.collection('desktopNotifications').add({
+      ...loginData,
+      created: admin.firestore.FieldValue.serverTimestamp()
+    });
+    
+    console.log(`[DEBUG] Web login notification stored for desktop app`);
+    
+    // Also try to notify desktop app directly if it's listening
+    try {
+      const desktopResponse = await fetch('http://127.0.0.1:51234/web-login-forward', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(loginData),
+        timeout: 5000
       });
+      
+      if (desktopResponse.ok) {
+        console.log(`[DEBUG] Desktop app notified directly`);
+      } else {
+        console.log(`[DEBUG] Desktop app not responding, using Firestore only`);
+      }
+    } catch (desktopError) {
+      console.log(`[DEBUG] Desktop app communication failed: ${desktopError.message}`);
     }
-    
-    // Update existing user data
-    if (name) mockActiveUsers[userIndex].name = name;
-    if (phone) mockActiveUsers[userIndex].phone = phone;
-    if (trx) mockActiveUsers[userIndex].trx = trx;
-    if (plan) mockActiveUsers[userIndex].plan = plan;
-    if (method) mockActiveUsers[userIndex].method = method;
-    if (created) mockActiveUsers[userIndex].created = created;
-    if (expiry) mockActiveUsers[userIndex].expiry = expiry;
-    
-    console.log('User updated:', { email, name, plan });
     
     res.json({
       success: true,
-      message: 'User updated successfully',
-      user: mockActiveUsers[userIndex]
+      message: 'Login notification sent to desktop app'
     });
     
   } catch (error) {
-    console.error('User update error:', error);
+    console.error('Web login forward error:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -401,36 +242,30 @@ app.post('/api/user/update', async (req, res) => {
   }
 });
 
-// Active Users Update API (for admin panel)
-app.put('/api/active-users/:id', async (req, res) => {
+// Get desktop notifications API
+app.get('/api/desktop-notifications', async (req, res) => {
   try {
-    const { id } = req.params;
-    const { manualRank, manualRankColor } = req.body;
+    const snapshot = await db.collection('desktopNotifications')
+      .orderBy('created', 'desc')
+      .limit(10)
+      .get();
     
-    // Find user by ID
-    const userIndex = mockActiveUsers.findIndex(u => u.id === id);
-    
-    if (userIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
+    const notifications = [];
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      notifications.push({
+        id: doc.id,
+        ...data
       });
-    }
-    
-    // Update user data
-    if (manualRank !== undefined) mockActiveUsers[userIndex].manualRank = manualRank;
-    if (manualRankColor) mockActiveUsers[userIndex].manualRankColor = manualRankColor;
-    
-    console.log('Active user updated:', { id, manualRank, manualRankColor });
+    });
     
     res.json({
       success: true,
-      message: 'User updated successfully',
-      user: mockActiveUsers[userIndex]
+      notifications: notifications
     });
     
   } catch (error) {
-    console.error('Active user update error:', error);
+    console.error('Get notifications error:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
@@ -438,253 +273,30 @@ app.put('/api/active-users/:id', async (req, res) => {
   }
 });
 
-// Delete Active User API
-app.delete('/api/active-users/:id', async (req, res) => {
+// Mark notification as processed
+app.delete('/api/desktop-notifications/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Find user by ID
-    const userIndex = mockActiveUsers.findIndex(u => u.id === id);
-    
-    if (userIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-    
-    // Remove user
-    const deletedUser = mockActiveUsers.splice(userIndex, 1)[0];
-    
-    console.log('Active user deleted:', { id, email: deletedUser.email });
+    await db.collection('desktopNotifications').doc(id).delete();
     
     res.json({
       success: true,
-      message: 'User deleted successfully'
+      message: 'Notification marked as processed'
     });
     
   } catch (error) {
-    console.error('Delete user error:', error);
+    console.error('Delete notification error:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error'
     });
   }
-});
-
-// Chat Messages API
-app.get('/api/chat-messages', (req, res) => {
-  res.json([]);
-});
-
-app.get('/api/chat-messages/sync', (req, res) => {
-  res.json({ success: true, message: 'Sync completed' });
-});
-
-// Exchange Rates API
-app.get('/data/exchange_rates.json', (req, res) => {
-  res.json({
-    USD: 1.0,
-    EUR: 0.85,
-    GBP: 0.73,
-    JPY: 110.5,
-    BDT: 110.0
-  });
-});
-
-// Auth Check API
-app.post('/api/auth/check', (req, res) => {
-  const { token } = req.body;
-  
-  if (!token) {
-    return res.status(400).json({
-      success: false,
-      message: 'Token required'
-    });
-  }
-  
-  // Mock token validation (in real implementation, verify with database)
-  res.json({
-    success: true,
-    valid: true,
-    user: {
-      id: '123',
-      email: 'user@example.com',
-      name: 'Test User',
-      plan: 'basic'
-    }
-  });
 });
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Status endpoint for desktop app sync
-app.get('/status', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    logged_in: false,
-    user_email: null,
-    user_plan: null,
-    license_expiry: null
-  });
-});
-
-// Admin Panel APIs (mock)
-app.get('/api/settings', (req, res) => {
-  res.json({
-    success: true,
-    settings: {
-      auto_approve: false,
-      default_plan: 'basic',
-      default_days: 180,
-      max_requests_per_day: 50,
-      notification_email: '',
-      maintenance_mode: false
-    }
-  });
-});
-
-app.get('/api/requests', (req, res) => {
-  res.json(mockPendingRequests);
-});
-
-app.post('/api/requests', (req, res) => {
-  const { email, phone, plan, days, amount } = req.body;
-  const newRequest = {
-    id: Date.now().toString(),
-    email,
-    phone: phone || '',
-    plan: plan || 'basic',
-    days: days || 180,
-    amount: amount || 0,
-    status: 'pending',
-    timestamp: new Date().toISOString()
-  };
-  mockPendingRequests.push(newRequest);
-  res.json({ success: true, request: newRequest });
-});
-
-app.delete('/api/requests/:id', (req, res) => {
-  const { id } = req.params;
-  const index = mockPendingRequests.findIndex(req => req.id === id);
-  if (index !== -1) {
-    mockPendingRequests.splice(index, 1);
-    res.json({ success: true });
-  } else {
-    res.status(404).json({ success: false, message: 'Request not found' });
-  }
-});
-
-app.get('/api/active-users', (req, res) => {
-  res.json(mockActiveUsers);
-});
-
-app.post('/api/active-users', (req, res) => {
-  const { email, name, phone, plan, days, amount } = req.body;
-  const newUser = {
-    id: Date.now().toString(),
-    email,
-    name,
-    phone: phone || '',
-    plan: plan || 'basic',
-    expiry: new Date(Date.now() + (days || 180) * 24 * 60 * 60 * 1000).toISOString(),
-    created: new Date().toISOString(),
-    amount: amount || 0,
-    status: 'active'
-  };
-  mockActiveUsers.push(newUser);
-  res.json({ success: true, user: newUser });
-});
-
-// Approve request endpoint
-app.post('/api/approve-request', (req, res) => {
-  try {
-    const { requestId, email, plan, days } = req.body;
-    
-    if (!requestId || !email) {
-      return res.status(400).json({
-        success: false,
-        message: 'Request ID and email required'
-      });
-    }
-    
-    // Find and update the request
-    const requestIndex = mockPendingRequests.findIndex(req => req.id === requestId);
-    if (requestIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Request not found'
-      });
-    }
-    
-    // Update request status
-    mockPendingRequests[requestIndex].status = 'approved';
-    mockPendingRequests[requestIndex].approved_at = new Date().toISOString();
-    
-    // Add to active users
-    const approvedUser = {
-      id: Date.now().toString(),
-      email,
-      name: mockPendingRequests[requestIndex].name || email,
-      phone: mockPendingRequests[requestIndex].phone || '',
-      plan: plan || 'basic',
-      expiry: new Date(Date.now() + (days || 180) * 24 * 60 * 60 * 1000).toISOString(),
-      created: new Date().toISOString(),
-      amount: mockPendingRequests[requestIndex].amount || 0,
-      status: 'active',
-      approved_by: 'admin',
-      original_request_id: requestId
-    };
-    
-    mockActiveUsers.push(approvedUser);
-    
-    console.log('Request approved:', { requestId, email, plan, days });
-    
-    res.json({
-      success: true,
-      message: 'Request approved successfully',
-      user: approvedUser
-    });
-    
-  } catch (error) {
-    console.error('Approve request error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
-
-// Direct approve endpoint (for admin panel)
-app.post('/approve', (req, res) => {
-  try {
-    const { email, plan, days } = req.body;
-    
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email required'
-      });
-    }
-    
-    console.log('Desktop approve request:', { email, plan, days });
-    
-    res.json({
-      success: true,
-      message: 'Desktop approval successful'
-    });
-    
-  } catch (error) {
-    console.error('Desktop approve error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
 });
 
 // Start server
