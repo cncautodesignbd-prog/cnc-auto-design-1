@@ -9,12 +9,15 @@ app.use(express.json());
 
 // Firebase Admin SDK
 const admin = require('firebase-admin');
-const serviceAccount = require('./firebase_config.json');
 
-// Initialize Firebase Admin
+// Initialize Firebase Admin (without service account file for now)
 if (!admin.apps.length) {
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
+    credential: admin.credential.cert({
+      projectId: "cnc-auto-design-1",
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL || "firebase-adminsdk-xxxxx@cnc-auto-design-1.iam.gserviceaccount.com",
+      privateKey: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : "-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_HERE\n-----END PRIVATE KEY-----\n"
+    })
   });
 }
 
