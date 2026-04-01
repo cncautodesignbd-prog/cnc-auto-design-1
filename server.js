@@ -21,11 +21,27 @@ if (!admin.apps.length) {
     try {
       console.log('Initializing Firebase with environment variables...');
       
+      // Try to parse private key as JSON string first
+      let formattedPrivateKey = privateKey;
+      
+      // If private key is a JSON string, parse it
+      if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+        try {
+          formattedPrivateKey = JSON.parse(privateKey);
+          console.log('Private key parsed from JSON string');
+        } catch (jsonError) {
+          console.log('Failed to parse private key as JSON, using as is');
+        }
+      }
+      
+      // Fix newline characters if needed
+      formattedPrivateKey = formattedPrivateKey.replace(/\\n/g, '\n');
+      
       admin.initializeApp({
         credential: admin.credential.cert({
           projectId,
           clientEmail,
-          privateKey
+          privateKey: formattedPrivateKey
         })
       });
       
