@@ -7,23 +7,19 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Firebase Admin SDK
-const admin = require('firebase-admin');
+// Mock database for testing (without Firebase)
+const mockUsers = [
+  {
+    email: 'test@example.com',
+    password: 'password123',
+    name: 'Test User',
+    plan: 'basic',
+    expiry: '2024-12-31',
+    created: '2024-01-01'
+  }
+];
 
-// Initialize Firebase Admin (without service account file for now)
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: "cnc-auto-design-1",
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL || "firebase-adminsdk-xxxxx@cnc-auto-design-1.iam.gserviceaccount.com",
-      privateKey: process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n') : "-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_HERE\n-----END PRIVATE KEY-----\n"
-    })
-  });
-}
-
-const db = admin.firestore();
-
-// Verify Login API
+// Verify Login API (without Firebase)
 app.post('/api/verify-login', async (req, res) => {
   try {
     const { email, password, device_info } = req.body;
@@ -35,25 +31,8 @@ app.post('/api/verify-login', async (req, res) => {
       });
     }
     
-    // Get latest active users backup from Firebase
-    const snapshot = await db.collection('activeUsersBackup')
-      .orderBy('timestamp', 'desc')
-      .limit(1)
-      .get();
-    
-    if (snapshot.empty) {
-      return res.status(404).json({
-        success: false,
-        message: 'No users found'
-      });
-    }
-    
-    const doc = snapshot.docs[0];
-    const data = doc.data();
-    const users = data.users || [];
-    
-    // Find user by email
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    // Find user in mock database
+    const user = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
     
     if (!user) {
       return res.status(404).json({
@@ -94,9 +73,9 @@ app.post('/api/verify-login', async (req, res) => {
           plan: user.plan,
           expiry: user.expiry,
           expiry_timestamp: expiryTimestamp,
-          phone: user.phone,
+          phone: user.phone || '',
           created: user.created,
-          amount: user.amount
+          amount: 0
         }
       });
     } else {
@@ -115,7 +94,7 @@ app.post('/api/verify-login', async (req, res) => {
   }
 });
 
-// Desktop Login API
+// Desktop Login API (without Firebase)
 app.post('/api/desktop-login', async (req, res) => {
   try {
     const { email, user_data } = req.body;
@@ -127,7 +106,7 @@ app.post('/api/desktop-login', async (req, res) => {
       });
     }
     
-    // Create desktop login request
+    // Create desktop login request (mock)
     const loginRequest = {
       id: Date.now().toString(),
       email: email,
@@ -135,9 +114,6 @@ app.post('/api/desktop-login', async (req, res) => {
       status: 'pending',
       timestamp: new Date().toISOString()
     };
-    
-    // Store in Firebase
-    await db.collection('desktopLoginRequests').add(loginRequest);
     
     console.log('Desktop login request created:', loginRequest);
     
@@ -156,22 +132,11 @@ app.post('/api/desktop-login', async (req, res) => {
   }
 });
 
-// Desktop Login Requests API
+// Desktop Login Requests API (mock)
 app.get('/api/desktop-login-requests', async (req, res) => {
   try {
-    const snapshot = await db.collection('desktopLoginRequests')
-      .where('status', '==', 'pending')
-      .get();
-    
-    const requests = [];
-    snapshot.forEach(doc => {
-      requests.push({
-        id: doc.id,
-        ...doc.data()
-      });
-    });
-    
-    res.json(requests);
+    // Return empty array for now (mock)
+    res.json([]);
     
   } catch (error) {
     console.error('Get desktop login requests error:', error);
@@ -182,16 +147,13 @@ app.get('/api/desktop-login-requests', async (req, res) => {
   }
 });
 
-// Update Desktop Login Request
+// Update Desktop Login Request (mock)
 app.patch('/api/desktop-login-requests/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
     
-    await db.collection('desktopLoginRequests').doc(id).update({
-      status: status || 'processed',
-      processed_at: new Date().toISOString()
-    });
+    console.log(`Update request ${id} to status: ${status}`);
     
     res.json({ success: true });
     
@@ -204,7 +166,7 @@ app.patch('/api/desktop-login-requests/:id', async (req, res) => {
   }
 });
 
-// Desktop Login Approve API
+// Desktop Login Approve API (mock)
 app.post('/api/desktop-login-approve', async (req, res) => {
   try {
     const { email, plan, days } = req.body;
@@ -216,7 +178,7 @@ app.post('/api/desktop-login-approve', async (req, res) => {
       });
     }
     
-    // Create desktop login request for approved user
+    // Create desktop login request for approved user (mock)
     const loginRequest = {
       id: Date.now().toString(),
       email: email,
@@ -228,9 +190,6 @@ app.post('/api/desktop-login-approve', async (req, res) => {
       status: 'pending',
       timestamp: new Date().toISOString()
     };
-    
-    // Store in Firebase
-    await db.collection('desktopLoginRequests').add(loginRequest);
     
     console.log('Desktop login approval created:', loginRequest);
     
