@@ -62,6 +62,10 @@ function readData(filePath) {
         return JSON.parse(fs.readFileSync(filePath, 'utf8'));
     } catch (error) {
         console.error('Error reading data:', error);
+        // Return empty object for pending-logins.json, empty array for others
+        if (filePath.includes('pending-logins')) {
+            return {};
+        }
         return [];
     }
 }
@@ -521,27 +525,49 @@ app.get('/api/pending-login', (req, res) => {
   try {
     const { email } = req.query;
     
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email is required' });
-    }
-    
-    const pendingLogins = readData('pending-logins.json');
-    const loginData = pendingLogins[email.toLowerCase()];
-    
-    if (loginData) {
-      // Remove from pending after successful retrieval
-      delete pendingLogins[email.toLowerCase()];
-      writeData('pending-logins.json', pendingLogins);
+    // If email is provided, check for specific email
+    if (email) {
+      const pendingLogins = readData('pending-logins.json');
+      const loginData = pendingLogins[email.toLowerCase()];
       
-      res.json({ 
-        success: true, 
-        login_data: loginData 
-      });
+      if (loginData) {
+        // Remove from pending after successful retrieval
+        delete pendingLogins[email.toLowerCase()];
+        writeData('pending-logins.json', pendingLogins);
+        
+        res.json({ 
+          success: true, 
+          login_data: loginData 
+        });
+      } else {
+        res.json({ 
+          success: false, 
+          message: 'No pending login data found' 
+        });
+      }
     } else {
-      res.json({ 
-        success: false, 
-        message: 'No pending login data found' 
-      });
+      // If no email provided, return the first pending login found
+      const pendingLogins = readData('pending-logins.json');
+      const emails = Object.keys(pendingLogins);
+      
+      if (emails.length > 0) {
+        const firstEmail = emails[0];
+        const loginData = pendingLogins[firstEmail];
+        
+        // Remove from pending after successful retrieval
+        delete pendingLogins[firstEmail];
+        writeData('pending-logins.json', pendingLogins);
+        
+        res.json({ 
+          success: true, 
+          login_data: loginData 
+        });
+      } else {
+        res.json({ 
+          success: false, 
+          message: 'No pending login data found' 
+        });
+      }
     }
     
   } catch (error) {
