@@ -486,6 +486,70 @@ function checkExpiry(req, res, next) {
     next();
 }
 
+// Handle web-login from website to desktop app
+app.post('/web-login', (req, res) => {
+  try {
+    const { email, user_data } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+    
+    // Store login data for desktop app to fetch
+    const loginData = {
+      email: email,
+      user_data: user_data,
+      timestamp: Date.now(),
+      status: 'pending'
+    };
+    
+    // Save to pending-logins.json
+    const pendingLogins = readData('pending-logins.json');
+    pendingLogins[email.toLowerCase()] = loginData;
+    writeData('pending-logins.json', pendingLogins);
+    
+    res.json({ success: true, message: 'Login data received' });
+    
+  } catch (error) {
+    console.error('Web-login error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Get pending login data for desktop app
+app.get('/api/pending-login', (req, res) => {
+  try {
+    const { email } = req.query;
+    
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+    
+    const pendingLogins = readData('pending-logins.json');
+    const loginData = pendingLogins[email.toLowerCase()];
+    
+    if (loginData) {
+      // Remove from pending after successful retrieval
+      delete pendingLogins[email.toLowerCase()];
+      writeData('pending-logins.json', pendingLogins);
+      
+      res.json({ 
+        success: true, 
+        login_data: loginData 
+      });
+    } else {
+      res.json({ 
+        success: false, 
+        message: 'No pending login data found' 
+      });
+    }
+    
+  } catch (error) {
+    console.error('Get pending login error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({
